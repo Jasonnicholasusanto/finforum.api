@@ -63,3 +63,5 @@ black==24.4.2
 pytest==8.2.2
 mypy==1.10.0
 ruff==0.12.5
+psycopg2-binary==2.9.10
+sqlmodel==0.0.24
