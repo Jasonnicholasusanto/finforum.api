@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str
 
     POSTGRES_SERVER: str
-    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT: int = 6543
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
@@ -67,7 +67,8 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
         return MultiHostUrl.build(  # type:ignore
-            scheme="postgresql+psycopg",
+            # scheme="postgresql+psycopg",
+            scheme="postgresql",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
             host=self.POSTGRES_SERVER,
