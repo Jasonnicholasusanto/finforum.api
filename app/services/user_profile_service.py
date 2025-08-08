@@ -9,7 +9,7 @@ def get_user_profile(db: Session, user_id: UUID):
 
 
 def create_user_profile(db: Session, profile: UserProfileCreate):
-    db_profile = UserProfile(**profile.dict())
+    db_profile = UserProfile(**profile.model_dump(exclude_unset=True))
     db.add(db_profile)
     db.commit()
     db.refresh(db_profile)
@@ -27,3 +27,4 @@ def update_user_profile(db: Session, user_id: UUID, profile_update: UserProfileU
     db.commit()
     db.refresh(profile)
     return profile
+
