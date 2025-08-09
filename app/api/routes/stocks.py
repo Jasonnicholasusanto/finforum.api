@@ -3,7 +3,7 @@ from app.models.stocks import TickerItem
 import yfinance as yf
 
 
-router = APIRouter()
+router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 
 @router.post("/get-ticker-data/")

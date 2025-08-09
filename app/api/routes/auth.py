@@ -5,7 +5,8 @@ from app.services.auth import signup_user
 from app.crud.user_profile import user_profile
 from app.api.deps import get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["auth"])
+
 
 @router.post("/sign-up", status_code=status.HTTP_201_CREATED)
 async def sign_up(user_in: UserProfileCreate, db: Session = Depends(get_db)):

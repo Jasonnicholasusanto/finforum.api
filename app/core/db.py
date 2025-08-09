@@ -11,4 +11,3 @@ def get_db() -> Generator[Session, None]:
     # It opens a SQLAlchemy/SQLModel session to your Supabase database and automatically closes it after the request finishes.
     with Session(engine) as session:
         yield session
-

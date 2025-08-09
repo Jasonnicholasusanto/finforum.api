@@ -5,7 +5,9 @@ from app.schemas.user_profile import UserProfileCreate, UserProfileUpdate
 
 
 def get_user_profile(session: Session, user_id: UUID):
-    return session.exec(select(UserProfile).where(UserProfile.user_id == user_id)).first()
+    return session.exec(
+        select(UserProfile).where(UserProfile.user_id == user_id)
+    ).first()
 
 
 def create_user_profile(session: Session, profile: UserProfileCreate):
@@ -16,7 +18,9 @@ def create_user_profile(session: Session, profile: UserProfileCreate):
     return db_profile
 
 
-def update_user_profile(session: Session, user_id: UUID, profile_update: UserProfileUpdate):
+def update_user_profile(
+    session: Session, user_id: UUID, profile_update: UserProfileUpdate
+):
     profile = get_user_profile(session, user_id)
     if not profile:
         return None
@@ -27,4 +31,3 @@ def update_user_profile(session: Session, user_id: UUID, profile_update: UserPro
     session.commit()
     session.refresh(profile)
     return profile
-

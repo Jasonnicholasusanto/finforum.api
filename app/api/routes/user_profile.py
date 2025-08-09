@@ -12,12 +12,14 @@ from app.services.user_profile_service import (
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
+
 @router.get("/{user_id}", response_model=UserProfileRead)
 def read_profile(user: CurrentUser, db: Session = Depends(SessionDep)):
     profile = get_user_profile(db, user.id)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     return profile
+
 
 @router.put("/{user_id}", response_model=UserProfileRead)
 def update_profile(
