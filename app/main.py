@@ -18,7 +18,9 @@ logger = logging.getLogger("uvicorn")
 def register_models():
     # Importing these attaches tables to SQLModel.metadata (side effects)
     from app.models import auth as _auth, user_profile as _user_profile  # noqa: F401
+
     return True
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa ARG001

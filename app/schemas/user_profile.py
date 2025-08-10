@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 import uuid
 
+
 # Shared fields for input/output schemas
 class UserProfileBase(BaseModel):
     username: str
@@ -14,8 +15,10 @@ class UserProfileBase(BaseModel):
     is_active: bool = True
     is_admin: Optional[bool] = False
 
+
 class UserProfileCreate(UserProfileBase):
     pass
+
 
 class UserProfileUpdate(BaseModel):
     username: Optional[str] = None
@@ -27,6 +30,7 @@ class UserProfileUpdate(BaseModel):
     background_picture: Optional[str] = None
     is_active: Optional[bool] = None
     is_admin: Optional[bool] = None
+
 
 class UserProfilePublic(UserProfileBase):
     user_profile_id: int

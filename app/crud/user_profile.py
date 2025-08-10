@@ -9,10 +9,12 @@ class CRUDUserProfile(CRUDBase[UserProfile, UserProfileCreate, UserProfileUpdate
         self, session: Session, *, owner_id: uuid.UUID, obj_in: UserProfileCreate
     ) -> UserProfile:
         return super().create(session, owner_id=owner_id, obj_in=obj_in)
-    
-    def update(self, session: Session, *, id: uuid.UUID, obj_in: UserProfileUpdate) -> UserProfile | None:
-        return super().update(session, id=id, obj_in=obj_in) 
-       
+
+    def update(
+        self, session: Session, *, id: uuid.UUID, obj_in: UserProfileUpdate
+    ) -> UserProfile | None:
+        return super().update(session, id=id, obj_in=obj_in)
+
     # def create_profile(
     #     self, session: Session, user_id: str, obj_in: UserProfileCreate
     # ) -> UserProfile:

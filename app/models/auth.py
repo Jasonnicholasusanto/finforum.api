@@ -7,6 +7,7 @@ class User(SQLModel, table=True):
     """Auth.Users table (managed by Supabase).
     ⚠️ Do not run Alembic migrations on this table.
     """
+
     __tablename__ = "users"
     __table_args__ = {"schema": "auth", "keep_existing": True}
 

@@ -26,7 +26,6 @@ def read_profile(user: CurrentUser, db: Session = Depends(SessionDep)):
     return profile
 
 
-
 @router.put("/", response_model=UserProfilePublic)
 def update_profile(
     user: CurrentUser,
@@ -41,6 +40,11 @@ def update_profile(
         raise HTTPException(status_code=404, detail="Profile not found")
     return profile
 
+
 @router.get("/me")
 async def me(current: UserIn = Depends(get_current_user)):
-    return {"id": current.id, "email": current.email, "access_token": current.access_token}
+    return {
+        "id": current.id,
+        "email": current.email,
+        "access_token": current.access_token,
+    }

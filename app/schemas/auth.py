@@ -58,6 +58,7 @@ class UserSignUp(BaseModel):
     phone_number: Optional[str]
     bio: Optional[str]
 
+
 # request
 class UserIn(Token, User):  # type: ignore
     pass
