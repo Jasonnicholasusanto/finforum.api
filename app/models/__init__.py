@@ -1,0 +1,11 @@
+# For database representation (SQLModel)
+# --------------------------------------------------------------------------------------------------------------
+# What it is: A representation of a table in your database — usually tied to ORM (Object-Relational Mapping).
+# Purpose: Used to read/write data from the DB.
+# Significance: Bridges Python objects with database rows.
+# Knows about database fields, constraints, and sometimes relationships (foreign keys, etc.).
+
+from .auth import User
+from .user_profile import UserProfile
+
+__all__ = ["User", "UserProfile"]

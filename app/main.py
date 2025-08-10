@@ -1,34 +1,3 @@
-# import asyncio
-# from fastapi import FastAPI
-# from contextlib import asynccontextmanager
-# from sqlmodel import SQLModel
-# from app.core.db import engine
-# from app.api.main import api_router
-
-
-# def create_db_and_tables():
-#     SQLModel.metadata.create_all(engine)
-
-
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     try:
-#         create_db_and_tables()
-#         yield
-#     except asyncio.CancelledError:
-#         pass
-#     # SQLModel.metadata.drop_all(engine)
-
-
-# app = FastAPI(lifespan=lifespan)
-
-# app.include_router(api_router.router)
-
-
-# @app.get("/")
-# async def root():
-#     return {"message": "Welcome to FinForum API."}
-
 import logging
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -46,11 +15,18 @@ from app.utils import custom_generate_unique_id
 logger = logging.getLogger("uvicorn")
 
 
+def register_models():
+    # Importing these attaches tables to SQLModel.metadata (side effects)
+    from app.models import auth as _auth, user_profile as _user_profile  # noqa: F401
+    return True
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa ARG001
     """life span events"""
     try:
         logger.info("lifespan start")
+        # Register models to SQLModel metadata
+        register_models()
         yield
     finally:
         logger.info("lifespan exit")
@@ -87,7 +63,6 @@ async def read_root() -> dict[str, str]:
 
 # Logger
 def timestamp_log_config(uvicorn_log_config: dict[str, Any]) -> dict[str, Any]:
-    """https://github.com/fastapi/fastapi/discussions/7457#discussioncomment-5565969"""
     datefmt = "%d-%m-%Y %H:%M:%S"
     formatters = uvicorn_log_config["formatters"]
     formatters["default"]["fmt"] = "%(levelprefix)s [%(asctime)s] %(message)s"

@@ -1,17 +1,17 @@
 from uuid import UUID
 from sqlmodel import Session, select
-from app.models.user_profile import UserProfile
+from app.schemas.user_profile import UserProfileBase
 from app.schemas.user_profile import UserProfileCreate, UserProfileUpdate
 
 
 def get_user_profile(session: Session, user_id: UUID):
     return session.exec(
-        select(UserProfile).where(UserProfile.user_id == user_id)
+        select(UserProfileBase).where(UserProfileBase.user_id == user_id)
     ).first()
 
 
 def create_user_profile(session: Session, profile: UserProfileCreate):
-    db_profile = UserProfile(**profile.model_dump(exclude_unset=True))
+    db_profile = UserProfileBase(**profile.model_dump(exclude_unset=True))
     session.add(db_profile)
     session.commit()
     session.refresh(db_profile)
