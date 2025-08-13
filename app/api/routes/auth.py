@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from supabase import create_async_client
 from app.core.config import settings
-
 from uuid import UUID
 from app.schemas.auth import LoginBody, UserSignUp
 from app.models.user_profile import UserProfileCreate
@@ -22,7 +21,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login")
 async def login(body: LoginBody, db: SessionDep):
-    sb = await create_async_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+    sb = await create_async_client(settings.SUPABASE_URL, settings.SUPABASE_KEY_ANON)
     res = await sb.auth.sign_in_with_password(
         {"email": body.email, "password": body.password}
     )

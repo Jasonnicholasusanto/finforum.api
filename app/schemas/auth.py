@@ -1,6 +1,6 @@
 from typing import Optional
 from gotrue import User, UserAttributes
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 # Shared properties
@@ -11,7 +11,7 @@ class Token(BaseModel):
 
 class UserSignUp(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
     username: Optional[str]
     full_name: Optional[str]
     phone_number: Optional[str]
@@ -56,4 +56,4 @@ class UserInDB(User):  # type: ignore
 # Properties to receive via API for user login
 class LoginBody(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)

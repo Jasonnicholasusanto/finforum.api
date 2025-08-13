@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 import uuid
 
 
@@ -33,3 +33,13 @@ class UserProfileUpdate(BaseModel):
 
 class UserProfilePublic(UserProfileBase):
     user_id: uuid.UUID
+
+
+class UpdateEmailIn(BaseModel):
+    new_email: EmailStr
+    password: str = Field(min_length=8)
+
+
+class UpdatePasswordIn(BaseModel):
+    current_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
