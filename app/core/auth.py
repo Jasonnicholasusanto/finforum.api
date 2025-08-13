@@ -1,43 +1,51 @@
 import logging
 from typing import Annotated
 
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from supabase import AsyncClientOptions
-from supabase._async.client import AsyncClient, create_client
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from supabase import create_async_client
+from supabase._async.client import AsyncClient
 
 from app.core.config import settings
 from app.schemas.auth import UserIn
 
+logger = logging.getLogger(__name__)
 
-async def get_super_client() -> AsyncClient:
-    """for validation access_token init at life span event"""
-    super_client = await create_client(
-        settings.SUPABASE_URL,
-        settings.SUPABASE_KEY,
-        options=AsyncClientOptions(
-            postgrest_client_timeout=10, storage_client_timeout=10
-        ),
-    )
-    if not super_client:
-        raise HTTPException(status_code=500, detail="Super client not initialized")
-    return super_client
+# Simple Bearer token scheme (Swagger will show a single token box)
+bearer = HTTPBearer(auto_error=True)
 
 
-SuperClient = Annotated[AsyncClient, Depends(get_super_client)]
+async def get_supabase_anon_client() -> AsyncClient:
+    """
+    Create an anon-key Supabase client.
+    Safe for serverless: cheap to construct and uses HTTPS (no DB sockets).
+    """
+    return await create_async_client(settings.SUPABASE_URL, settings.SUPABASE_KEY_ANON)
 
 
-# auto get token from header
-reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/access-token"
-)
-TokenDep = Annotated[str, Depends(reusable_oauth2)]
+TokenCreds = Annotated[HTTPAuthorizationCredentials, Depends(bearer)]
+SupabaseAnon = Annotated[AsyncClient, Depends(get_supabase_anon_client)]
 
 
-async def get_current_user(token: TokenDep, super_client: SuperClient) -> UserIn:
-    """get current user from token and  validate same time"""
-    user_rsp = await super_client.auth.get_user(jwt=token)
-    if not user_rsp:
-        logging.error("User not found")
-        raise HTTPException(status_code=404, detail="User not found")
-    return UserIn(**user_rsp.user.model_dump(), access_token=token)
+async def get_current_user(
+    creds: TokenCreds,
+    supabase_client: SupabaseAnon,
+) -> UserIn:
+    """
+    Validate the JWT and return the current user.
+    Uses anon client + user token (no service-role needed).
+    """
+    token = creds.credentials
+    try:
+        res = await supabase_client.auth.get_user(jwt=token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+
+    if not res or not res.user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+
+    return UserIn(**res.user.model_dump(), access_token=token)

@@ -13,6 +13,7 @@ class UserProfileBase(SQLModel):
     username: str = Field(min_length=1, max_length=50)
     phone_number: Optional[str] = Field(default=None, max_length=50)
     full_name: str = Field(min_length=1, max_length=255)
+    display_name: Optional[str] = None
     bio: Optional[str] = None
     profile_picture: Optional[str] = None
     background_picture: Optional[str] = None

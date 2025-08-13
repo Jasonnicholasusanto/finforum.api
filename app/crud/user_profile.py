@@ -5,6 +5,12 @@ from app.models.user_profile import UserProfile, UserProfileCreate, UserProfileU
 
 
 class CRUDUserProfile(CRUDBase[UserProfile, UserProfileCreate, UserProfileUpdate]):
+    def get_by_user_id(
+        self, session: Session, *, user_id: uuid.UUID
+    ) -> UserProfile | None:
+        """Fetch the profile by its PK (user_id)."""
+        return session.get(UserProfile, user_id)
+
     def create(
         self, session: Session, *, owner_id: uuid.UUID, obj_in: UserProfileCreate
     ) -> UserProfile:
@@ -14,15 +20,6 @@ class CRUDUserProfile(CRUDBase[UserProfile, UserProfileCreate, UserProfileUpdate
         self, session: Session, *, id: uuid.UUID, obj_in: UserProfileUpdate
     ) -> UserProfile | None:
         return super().update(session, id=id, obj_in=obj_in)
-
-    # def create_profile(
-    #     self, session: Session, user_id: str, obj_in: UserProfileCreate
-    # ) -> UserProfile:
-    #     db_obj = UserProfile(user_id=user_id, **obj_in.model_dump(exclude={"user_id"}))
-    #     session.add(db_obj)
-    #     session.commit()
-    #     session.refresh(db_obj)
-    #     return db_obj
 
 
 user_profile = CRUDUserProfile(UserProfile)

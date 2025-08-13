@@ -1,13 +1,23 @@
+from typing import Optional
 from uuid import UUID
-from sqlmodel import Session, select
-from app.schemas.user_profile import UserProfileBase
-from app.schemas.user_profile import UserProfileCreate, UserProfileUpdate
+from sqlmodel import Session
+from app.models.user_profile import UserProfile
+from app.schemas.user_profile import (
+    UserProfileBase,
+    UserProfileCreate,
+    UserProfileUpdate,
+)
 
 
-def get_user_profile(session: Session, user_id: UUID):
-    return session.exec(
-        select(UserProfileBase).where(UserProfileBase.user_id == user_id)
-    ).first()
+# def get_user_profile(session: Session, user_id: UUID):
+#     return session.exec(
+#         select(UserProfileBase).where(UserProfileBase.user_id == user_id)
+#     ).first()
+
+
+def get_user_profile(session: Session, user_id: UUID) -> Optional[UserProfile]:
+    """Fetch the profile by its PK (user_id)."""
+    return session.get(UserProfile, user_id)
 
 
 def create_user_profile(session: Session, profile: UserProfileCreate):

@@ -6,9 +6,9 @@ import uuid
 # Shared fields for input/output schemas
 class UserProfileBase(BaseModel):
     username: str
-    email: str
     phone_number: Optional[str] = None
     full_name: str
+    display_name: Optional[str] = None
     bio: Optional[str] = None
     profile_picture: Optional[str] = None
     background_picture: Optional[str] = None
@@ -22,16 +22,14 @@ class UserProfileCreate(UserProfileBase):
 
 class UserProfileUpdate(BaseModel):
     username: Optional[str] = None
-    email: Optional[str] = None
     phone_number: Optional[str] = None
     full_name: Optional[str] = None
+    display_name: Optional[str] = None
     bio: Optional[str] = None
     profile_picture: Optional[str] = None
     background_picture: Optional[str] = None
-    is_active: Optional[bool] = None
-    is_admin: Optional[bool] = None
+    is_active: Optional[bool] = True
 
 
 class UserProfilePublic(UserProfileBase):
-    user_profile_id: int
     user_id: uuid.UUID
