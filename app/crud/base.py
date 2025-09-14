@@ -36,34 +36,95 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = session.exec(statement)
         return result.all()
 
+    # def create(
+    #     self, session: Session, *, owner_id: uuid.UUID, obj_in: CreateSchemaType
+    # ) -> ModelType:
+    #     """Create new record"""
+    #     db_obj = self.model(**dict(owner_id=owner_id, **obj_in.model_dump()))
+    #     session.add(db_obj)
+    #     session.commit()
+    #     session.refresh(db_obj)
+    #     return db_obj
+
     def create(
-        self, session: Session, *, owner_id: uuid.UUID, obj_in: CreateSchemaType
+        self,
+        session: Session,
+        *,
+        obj_in: CreateSchemaType,
+        **extra_fields,  # <-- accept arbitrary fields (e.g., auth_id or owner_id)
     ) -> ModelType:
-        """Create new record"""
-        db_obj = self.model(**dict(owner_id=owner_id, **obj_in.model_dump()))
+        """
+        Create a new record. Any keyword in extra_fields will be merged into the row.
+        This preserves backward compatibility with callers passing owner_id=...,
+        and enables new callers to pass auth_id=... for user_profile.
+        """
+        data = obj_in.model_dump(exclude_unset=True, exclude_none=True)
+        # Never allow the client to override the PK; let the DB generate it.
+        data.pop("id", None)
+        # Merge any extra fields (e.g., auth_id=..., owner_id=...)
+        for k, v in extra_fields.items():
+            if v is not None:
+                data[k] = v
+
+        db_obj = self.model(**data)
         session.add(db_obj)
-        session.commit()
+        try:
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         session.refresh(db_obj)
         return db_obj
+
+    # def update(
+    #     self, session: Session, *, id: uuid.UUID, obj_in: UpdateSchemaType
+    # ) -> ModelType | None:
+    #     """Update existing record"""
+    #     db_obj = self.get(session, id=id)
+    #     if db_obj:
+    #         update_data = obj_in.model_dump(exclude_unset=True)
+    #         db_obj.sqlmodel_update(update_data)
+
+    #         session.add(db_obj)
+    #         session.commit()
+    #         session.refresh(db_obj)
+    #     return db_obj
 
     def update(
         self, session: Session, *, id: uuid.UUID, obj_in: UpdateSchemaType
     ) -> ModelType | None:
-        """Update existing record"""
+        """Update existing record, excluding the PK from changes"""
         db_obj = self.get(session, id=id)
-        if db_obj:
-            update_data = obj_in.model_dump(exclude_unset=True)
-            db_obj.sqlmodel_update(update_data)
-
-            session.add(db_obj)
+        if not db_obj:
+            return None
+        update_data = obj_in.model_dump(exclude_unset=True)
+        update_data.pop("id", None)  # don't let updates change the PK
+        db_obj.sqlmodel_update(update_data)
+        session.add(db_obj)
+        try:
             session.commit()
-            session.refresh(db_obj)
+        except Exception:
+            session.rollback()
+            raise
+        session.refresh(db_obj)
         return db_obj
 
+    # def remove(self, session: Session, *, id: uuid.UUID) -> ModelType | None:
+    #     """Remove a record"""
+    #     obj = self.get(session, id=id)
+    #     if obj:
+    #         session.delete(obj)
+    #         session.commit()
+    #     return obj
+
     def remove(self, session: Session, *, id: uuid.UUID) -> ModelType | None:
-        """Remove a record"""
         obj = self.get(session, id=id)
-        if obj:
-            session.delete(obj)
+        if not obj:
+            return None
+        session.delete(obj)
+        try:
             session.commit()
+        except Exception:
+            session.rollback()
+            raise
         return obj

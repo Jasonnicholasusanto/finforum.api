@@ -1,43 +1,209 @@
-from typing import Optional
-from uuid import UUID
-from sqlmodel import Session
+from typing import Iterable, Optional
+import uuid
+from sqlmodel import Session, func, select
+from app.crud.user_profile import user_profile as user_profile_crud
+from app.models.auth import Identity
 from app.models.user_profile import UserProfile
 from app.schemas.user_profile import (
-    UserProfileBase,
     UserProfileCreate,
     UserProfileUpdate,
+    UserProfilePublic,
+    UserProfilesPublic,
+    UserProfileMe,
 )
 
 
-# def get_user_profile(session: Session, user_id: UUID):
-#     return session.exec(
-#         select(UserProfileBase).where(UserProfileBase.user_id == user_id)
-#     ).first()
+def _username_exists(
+    session: Session, username: str, exclude_id: Optional[uuid.UUID] = None
+) -> bool:
+    stmt = select(UserProfile.id).where(UserProfile.username == username)
+    if exclude_id:
+        stmt = stmt.where(UserProfile.id != exclude_id)
+    stmt = stmt.limit(1)
+    return session.exec(stmt).first() is not None
 
 
-def get_user_profile(session: Session, user_id: UUID) -> Optional[UserProfile]:
-    """Fetch the profile by its PK (user_id)."""
-    return session.get(UserProfile, user_id)
+def _email_exists(
+    session: Session, email: str, exclude_id: Optional[uuid.UUID] = None
+) -> bool:
+    stmt = select(UserProfile.id).where(UserProfile.email_address == email)
+    if exclude_id:
+        stmt = stmt.where(UserProfile.id != exclude_id)
+    stmt = stmt.limit(1)
+    return session.exec(stmt).first() is not None
 
 
-def create_user_profile(session: Session, profile: UserProfileCreate):
-    db_profile = UserProfileBase(**profile.model_dump(exclude_unset=True))
-    session.add(db_profile)
-    session.commit()
-    session.refresh(db_profile)
-    return db_profile
+def _email_exists_auth_identity(
+    session: Session, email: str, exclude_id: Optional[uuid.UUID] = None
+) -> bool:
+    stmt = select(Identity.id).where(Identity.email == email)
+    if exclude_id:
+        stmt = stmt.where(Identity.user_id != exclude_id)
+    stmt = stmt.limit(1)
+    return session.exec(stmt).first() is not None
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Create User Profile
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def create_user_profile(
+    session: Session,
+    *,
+    auth_id: uuid.UUID,
+    profile_in: UserProfileCreate,
+) -> UserProfileMe:
+    """
+    Create a new profile bound to auth_id. Enforces username/email uniqueness.
+    """
+    if _username_exists(session, profile_in.username):
+        raise ValueError("Username is already taken.")
+    if _email_exists(session, str(profile_in.email_address)):
+        raise ValueError("Email address is already in use.")
+
+    db_obj = user_profile_crud.create(session, obj_in=profile_in, auth_id=auth_id)
+
+    return UserProfileMe.model_validate(db_obj)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Read User Profile
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def get_user_profile(
+    session: Session, *, user_id: uuid.UUID
+) -> Optional[UserProfilePublic]:
+    obj = user_profile_crud.get(session, id=user_id)
+    return UserProfilePublic.model_validate(obj) if obj else None
+
+
+def get_user_profile_db(
+    session: Session, *, user_id: uuid.UUID
+) -> Optional[UserProfile]:
+    """Raw DB object (useful internally for chaining logic)."""
+    return user_profile_crud.get(session, id=user_id)
+
+
+def get_user_profile_by_auth(
+    session: Session, *, auth_id: uuid.UUID
+) -> Optional[UserProfileMe]:
+    obj = user_profile_crud.get_by_auth_id(session, auth_id=auth_id)
+    return UserProfileMe.model_validate(obj) if obj else None
+
+
+def get_user_profile_by_username(
+    session: Session, *, username: str
+) -> Optional[UserProfilePublic]:
+    obj = user_profile_crud.get_by_username(session, username=username)
+    return UserProfilePublic.model_validate(obj) if obj else None
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# List User Profiles
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def list_user_profiles(
+    session: Session,
+    *,
+    skip: int = 0,
+    limit: int = 50,
+    q: Optional[str] = None,
+    only_active: bool = True,
+) -> UserProfilesPublic:
+    """
+    List profiles with optional fuzzy search across username/full_name/display_name/email.
+    """
+    stmt = select(UserProfile)
+
+    if only_active:
+        stmt = stmt.where(UserProfile.is_active.is_(True))
+
+    if q:
+        # basic ILIKE search over a few fields
+        like = f"%{q}%"
+        stmt = stmt.where(
+            (UserProfile.username.ilike(like))
+            | (UserProfile.full_name.ilike(like))
+            | (UserProfile.display_name.ilike(like))
+            | (UserProfile.email_address.ilike(like))
+        )
+
+    count_stmt = stmt.with_only_columns(func.count(UserProfile.id))
+    total = session.exec(count_stmt).one()
+
+    stmt = stmt.order_by(UserProfile.username).offset(skip).limit(limit)
+    rows: Iterable[UserProfile] = session.exec(stmt).all()  # type: ignore
+
+    data = [UserProfilePublic.model_validate(r) for r in rows]
+    return UserProfilesPublic(data=data, count=total)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Update User Profile
+# ---------------------------------------------------------------------------------------------------------------------
 
 
 def update_user_profile(
-    session: Session, user_id: UUID, profile_update: UserProfileUpdate
-):
-    profile = get_user_profile(session, user_id)
-    if not profile:
+    session: Session,
+    *,
+    user_id: uuid.UUID,
+    profile_update: UserProfileUpdate,
+) -> Optional[UserProfileMe]:
+    """
+    Patch update. Prevents changing auth_id and enforces uniqueness on username/email if present.
+    """
+    existing = user_profile_crud.get(session, id=user_id)
+    if not existing:
         return None
-    update_data = profile_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(profile, key, value)
-    session.add(profile)
-    session.commit()
-    session.refresh(profile)
-    return profile
+
+    if profile_update.username and _username_exists(
+        session, profile_update.username, exclude_id=user_id
+    ):
+        raise ValueError("Username is already taken.")
+
+    if profile_update.email_address and _email_exists(
+        session, str(profile_update.email_address), exclude_id=user_id
+    ):
+        raise ValueError("Email address is already in use.")
+
+    # Explicitly guard against accidental auth_id changes if someone slips it into the payload
+    if hasattr(profile_update, "auth_id"):
+        raise ValueError("auth_id cannot be modified.")
+
+    updated = user_profile_crud.update(session, id=user_id, obj_in=profile_update)
+    return UserProfileMe.model_validate(updated) if updated else None
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Delete / Reactivate User Profile
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def soft_delete_user_profile(
+    session: Session, *, user_id: uuid.UUID
+) -> Optional[UserProfileMe]:
+    obj = user_profile_crud.soft_delete(session, id=user_id)
+    return UserProfileMe.model_validate(obj) if obj else None
+
+
+def reactivate_user_profile(
+    session: Session, *, user_id: uuid.UUID
+) -> Optional[UserProfileMe]:
+    obj = user_profile_crud.reactivate(session, id=user_id)
+    return UserProfileMe.model_validate(obj) if obj else None
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Get me convenience
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def get_me(session: Session, *, auth_id: uuid.UUID) -> Optional[UserProfileMe]:
+    """
+    Convenience: return the richer 'me' payload for the authenticated user.
+    """
+    obj = user_profile_crud.get_by_auth_id(session, auth_id=auth_id)
+    return UserProfileMe.model_validate(obj) if obj else None

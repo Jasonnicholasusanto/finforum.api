@@ -1,21 +1,40 @@
-from typing import Optional
+import re
 from gotrue import User, UserAttributes
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import EmailStr, Field, SecretStr, field_validator
+from sqlmodel import SQLModel
 
 
 # Shared properties
-class Token(BaseModel):
+class Token(SQLModel):
     access_token: str | None = None
     refresh_token: str | None = None
 
 
-class UserSignUp(BaseModel):
+class UserLogIn(SQLModel):
     email: EmailStr
-    password: str = Field(min_length=8)
-    username: Optional[str]
-    full_name: Optional[str]
-    phone_number: Optional[str]
-    bio: Optional[str]
+    password: SecretStr = Field(min_length=8, max_length=128)
+
+
+class UserSignUp(SQLModel):
+    email: EmailStr
+    password: SecretStr = Field(min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def password_policy(cls, v: SecretStr) -> SecretStr:
+        pwd = v.get_secret_value()
+        # at least one lowercase, uppercase, digit, and symbol; no spaces
+        if not re.search(r"[a-z]", pwd):
+            raise ValueError("Password needs a lowercase letter.")
+        if not re.search(r"[A-Z]", pwd):
+            raise ValueError("Password needs an uppercase letter.")
+        if not re.search(r"\d", pwd):
+            raise ValueError("Password needs a digit.")
+        if not re.search(r"[^\w\s]", pwd):
+            raise ValueError("Password needs a symbol.")
+        if re.search(r"\s", pwd):
+            raise ValueError("Password cannot contain spaces.")
+        return v
 
 
 # request
@@ -25,7 +44,7 @@ class UserIn(Token, User):  # type: ignore
 
 # Properties to receive via API on creation
 # in
-class UserCreate(BaseModel):
+class UserCreate(SQLModel):
     pass
 
 
@@ -38,7 +57,7 @@ class UserUpdate(UserAttributes):  # type: ignore
 # response
 
 
-class UserInDBBase(BaseModel):
+class UserInDBBase(SQLModel):
     pass
 
 
@@ -51,9 +70,3 @@ class UserOut(Token):
 # Properties properties stored in DB
 class UserInDB(User):  # type: ignore
     pass
-
-
-# Properties to receive via API for user login
-class LoginBody(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=8)

@@ -1,3 +1,6 @@
+from typing import Literal
+
+
 RESERVED = {
     "@",
     "me",
@@ -97,3 +100,5 @@ RESERVED = {
     *{f"com{i}" for i in range(1, 10)},
     *{f"lpt{i}" for i in range(1, 10)},
 }
+
+WATCHLIST_VISIBILITY = Literal["private", "public", "shared"]

@@ -17,7 +17,7 @@ logger = logging.getLogger("uvicorn")
 
 def register_models():
     # Importing these attaches tables to SQLModel.metadata (side effects)
-    from app.models import auth as _auth, user_profile as _user_profile  # noqa: F401
+    from app.models import auth as _auth, user_profile as _user_profile, user_activity as _user_activity  # noqa F401
 
     return True
 

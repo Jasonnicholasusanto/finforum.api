@@ -7,5 +7,6 @@
 
 from .auth import User
 from .user_profile import UserProfile
+from .user_activity import UserActivity
 
-__all__ = ["User", "UserProfile"]
+__all__ = ["User", "UserProfile", "UserActivity"]
