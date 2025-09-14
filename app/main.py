@@ -78,5 +78,5 @@ def timestamp_log_config(uvicorn_log_config: dict[str, Any]) -> dict[str, Any]:
 
 if __name__ == "__main__":
     uvicorn.run(
-        app, host="0.0.0.0", port=8000, log_config=timestamp_log_config(LOGGING_CONFIG)
+        app, host="0.0.0.0", port=settings.PORT, log_config=timestamp_log_config(LOGGING_CONFIG)
     )

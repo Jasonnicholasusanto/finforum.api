@@ -35,6 +35,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     API_V1_STR: str = "/api/v1"
+    PORT: int = 8000
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
