@@ -60,7 +60,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/", tags=["root"])
 async def read_root() -> str:
-    return "Welcome to the FinForum API!"
+    return "Welcome to the Finforum API!"
 
 
 # Logger
