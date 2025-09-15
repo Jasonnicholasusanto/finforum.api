@@ -8,3 +8,4 @@ supabase==2.18.1
 yfinance==0.2.65
 pandas==2.3.2
 gotrue==2.12.3
+psycopg2-binary==2.9.10
