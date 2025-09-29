@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.user_activity import UserActivityPointsBreakdown
 from app.schemas.user_detail import UserDetailsPublic
-from app.schemas.user_profile import UserProfilePublic, UserProfilesPublic, Username
+from app.schemas.user_profile import USERNAME_REGEX, UserProfilePublic, UserProfilesPublic
 from app.services.user_activity_service import get_user_points
 from app.services.user_profile_service import _username_exists, get_user_profile_by_username, list_user_profiles
 
@@ -55,12 +55,23 @@ def search_users(
 
 
 @router.get("/check-username")
-def check_username(username: Username, db: SessionDep = None):
+def check_username(username: str, db: SessionDep = None):
     """
     Returns {'available': bool}. Case-insensitive check against user_profile.username.
     """
     if not username:
         raise HTTPException(status_code=400, detail="Username is required.")
+    
+    if not USERNAME_REGEX.match(username):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid username. Must start with a letter or number and may only contain letters, numbers, underscores, or dots",
+        )
+    if len(username) < 3 or len(username) > 30:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid username length. Must be between 3 and 30 characters.",
+        )
 
     exists = _username_exists(session=db, username=username)
     return {"available": not exists}
