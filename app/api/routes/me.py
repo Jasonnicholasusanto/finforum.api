@@ -121,8 +121,6 @@ def update_my_profile(
     Only fields provided in the request body will be updated.
     """
 
-    print(user)
-
     # Prevent reserved usernames
     if update.username and update.username.lower() in RESERVED:
         raise HTTPException(
