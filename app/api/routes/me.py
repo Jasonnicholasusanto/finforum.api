@@ -81,16 +81,16 @@ def create_my_profile(
 
     # 1) Guard: reserved usernames
     if payload.username and payload.username.lower() in RESERVED:
-        raise HTTPException(status_code=400, detail="Username is reserved")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is reserved")
     
     # 2) Prevent duplicate creation for the same auth_id
     if get_user_profile_by_auth(db, auth_id=user.id):
-        raise HTTPException(status_code=409, detail="User Profile already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User Profile already exists")
     
     # 2b) Prevent duplicate username
     exists = _username_exists(session=db, username=payload.username)
     if exists:
-        raise HTTPException(status_code=409, detail="Username already taken")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
 
     # 3) Build the create DTO (server never accepts auth_id from client)
     profile_in = UserProfileCreate(**payload.model_dump(exclude_unset=True))
@@ -105,12 +105,12 @@ def create_my_profile(
         )
     except IntegrityError:
         raise HTTPException(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Username, phone number, or email already in use",
         )
 
     if not profile:
-        raise HTTPException(status_code=500, detail="Failed to create profile")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create profile")
 
     return UserProfilePublic.model_validate(profile, from_attributes=True)
 
@@ -130,14 +130,14 @@ def update_my_profile(
     # Prevent reserved usernames
     if update.username and update.username.lower() in RESERVED:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Username is reserved",
         )
     
     # 2b) Prevent duplicate username
     exists = _username_exists(session=db, username=update.username)
     if exists:
-        raise HTTPException(status_code=409, detail="Username already taken")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
 
     # 3) Update via service
     try:
@@ -162,7 +162,7 @@ def update_my_profile(
 def soft_delete_my_profile(user: CurrentUser, db: SessionDep):
     profile = get_user_profile(db, user_id=user.id)
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
 
     db.soft_delete(db, id=profile.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -173,7 +173,7 @@ def soft_delete_my_profile(user: CurrentUser, db: SessionDep):
 def reactivate_my_account(user: CurrentUser, db: SessionDep):
     profile = get_user_profile(db, user_id=user.id)
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
 
     profile = db.reactivate(db, id=profile.id)
     return UserProfilePublic.model_validate(profile, from_attributes=True)
