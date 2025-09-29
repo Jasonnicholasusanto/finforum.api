@@ -1,4 +1,5 @@
 from typing import Optional
+from fastapi import HTTPException
 from pydantic import ConfigDict, EmailStr, Field, field_validator
 import uuid
 from sqlmodel import SQLModel
@@ -27,11 +28,9 @@ class UserProfileCreate(UserProfileBase):
     @classmethod
     def validate_username(cls, v: str) -> str:
         if not USERNAME_REGEX.match(v):
-            raise ValueError(
-                "Username must start with a letter or number and may only contain letters, numbers, underscores, or dots"
-            )
+            raise HTTPException(status_code=409, detail="Username must start with a letter or number and may only contain letters, numbers, underscores, or dots")
         if len(v) < 3 or len(v) > 30:
-            raise ValueError("Username must be between 3 and 30 characters")
+            raise HTTPException(status_code=409, detail="Username must be between 3 and 30 characters")
         return v
 
 
@@ -55,11 +54,9 @@ class UserProfileUpdate(SQLModel):
         if v is None:
             return v
         if not USERNAME_REGEX.match(v):
-            raise ValueError(
-                "Username must start with a letter or number and may only contain letters, numbers, underscores, or dots"
-            )
+            raise HTTPException(status_code=409, detail="Username must start with a letter or number and may only contain letters, numbers, underscores, or dots")
         if len(v) < 3 or len(v) > 30:
-            raise ValueError("Username must be between 3 and 30 characters")
+            raise HTTPException(status_code=409, detail="Username must be between 3 and 30 characters")
         return v
 
 

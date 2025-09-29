@@ -12,6 +12,7 @@ from app.schemas.user_profile import (
     UserProfileUpdate,
 )
 from app.services.user_profile_service import (
+    _username_exists,
     create_user_profile,
     get_user_profile,
     get_user_profile_by_auth,
@@ -85,12 +86,17 @@ def create_my_profile(
     # 2) Prevent duplicate creation for the same auth_id
     if get_user_profile_by_auth(db, auth_id=user.id):
         raise HTTPException(status_code=409, detail="User Profile already exists")
+    
+    # 2b) Prevent duplicate username
+    exists = _username_exists(session=db, username=payload.username)
+    if exists:
+        raise HTTPException(status_code=409, detail="Username already taken")
 
     # 3) Build the create DTO (server never accepts auth_id from client)
     profile_in = UserProfileCreate(**payload.model_dump(exclude_unset=True))
-    profile_in.email_address = user.email # sync email from auth system
+    profile_in.email_address = user.email
 
-    # 4) Create via service (which wraps your CRUD create)
+    # 4) Create via service
     try:
         profile = create_user_profile(
             db,
@@ -127,11 +133,16 @@ def update_my_profile(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username is reserved",
         )
+    
+    # 2b) Prevent duplicate username
+    exists = _username_exists(session=db, username=update.username)
+    if exists:
+        raise HTTPException(status_code=409, detail="Username already taken")
 
+    # 3) Update via service
     try:
         profile = update_user_profile(db, user_id=user.id, profile_update=update)
     except IntegrityError:
-        # Likely a UNIQUE violation (username, phone, or email conflicts)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Username or phone number already in use",
