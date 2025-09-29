@@ -8,6 +8,7 @@ from app.schemas.user_activity import UserActivityCreate, UserActivityPublic
 from app.schemas.user_detail import UserDetailsResponse
 from app.schemas.user_profile import (
     UserProfileCreate,
+    UserProfileMe,
     UserProfilePublic,
     UserProfileUpdate,
 )
@@ -56,7 +57,7 @@ def get_my_profile(user: CurrentUser, db: SessionDep):
         )
 
     return UserDetailsResponse(
-        profile=UserProfilePublic.model_validate(profile, from_attributes=True),
+        profile=UserProfileMe.model_validate(profile, from_attributes=True),
         activity=UserActivityPublic.model_validate(activity, from_attributes=True)
         if activity
         else None,
