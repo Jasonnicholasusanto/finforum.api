@@ -74,11 +74,13 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
 
-    @computed_field  # type: ignore[prop-decorator]
+    ALPHA_VANTAGE_API_KEY: str
+    ALPHA_VANTAGE_BASE_URL: str = "https://www.alphavantage.co/query"
+
+    @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build(  # type:ignore
-            # scheme="postgresql+psycopg",
+        return MultiHostUrl.build( 
             scheme="postgresql",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
