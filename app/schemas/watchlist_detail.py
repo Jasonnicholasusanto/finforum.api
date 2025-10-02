@@ -9,5 +9,6 @@ class WatchlistDetail(SQLModel):
     watchlist: WatchlistBase
     watchlist_items: List[WatchlistItemBase] | None
 
+
 class WatchlistsDetail(SQLModel):
     watchlists: List[WatchlistDetail]

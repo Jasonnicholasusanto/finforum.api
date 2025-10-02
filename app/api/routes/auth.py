@@ -13,7 +13,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login")
 async def login(user_in: UserLogIn):
-    try:           
+    try:
         res = await login_user(user_in.email, user_in.password)
 
         return {

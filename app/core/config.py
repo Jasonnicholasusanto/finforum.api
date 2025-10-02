@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build( 
+        return MultiHostUrl.build(
             scheme="postgresql",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,

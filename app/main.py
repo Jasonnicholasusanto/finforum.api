@@ -17,7 +17,11 @@ logger = logging.getLogger("uvicorn")
 
 def register_models():
     # Importing these attaches tables to SQLModel.metadata (side effects)
-    from app.models import auth as _auth, user_profile as _user_profile, user_activity as _user_activity  # noqa F401
+    from app.models import (
+        auth as _auth,
+        user_profile as _user_profile,
+        user_activity as _user_activity,
+    )  # noqa F401
 
     return True
 
@@ -78,5 +82,8 @@ def timestamp_log_config(uvicorn_log_config: dict[str, Any]) -> dict[str, Any]:
 
 if __name__ == "__main__":
     uvicorn.run(
-        app, host="0.0.0.0", port=settings.PORT, log_config=timestamp_log_config(LOGGING_CONFIG)
+        app,
+        host="0.0.0.0",
+        port=settings.PORT,
+        log_config=timestamp_log_config(LOGGING_CONFIG),
     )

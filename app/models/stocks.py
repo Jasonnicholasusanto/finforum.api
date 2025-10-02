@@ -1,5 +1,9 @@
-from typing import Literal
+from typing import List, Literal
 from pydantic import BaseModel
+
+
+class TickersRequest(BaseModel):
+    symbols: List[str]
 
 
 class TickerItem(BaseModel):

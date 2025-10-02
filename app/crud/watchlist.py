@@ -32,7 +32,7 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
             .limit(1)
         )
         return session.exec(stmt).first()
-    
+
     def get_public_by_username_and_name(
         self,
         session: Session,
@@ -65,7 +65,7 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
         )
 
         return session.exec(stmt).first()
-    
+
     def list_public_by_name(
         self, session: Session, *, name: str, limit: int = 20, offset: int = 0
     ) -> List[Watchlist]:
@@ -99,10 +99,14 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
         stmt = select(Watchlist).where(Watchlist.user_id == user_id)
         if q:
             stmt = stmt.where(Watchlist.name.ilike(f"%{q.strip()}%"))
-        stmt = stmt.order_by(
-            Watchlist.is_default.desc(),  # show default first
-            Watchlist.created_at.asc(),
-        ).limit(limit).offset(offset)
+        stmt = (
+            stmt.order_by(
+                Watchlist.is_default.desc(),  # show default first
+                Watchlist.created_at.asc(),
+            )
+            .limit(limit)
+            .offset(offset)
+        )
         return list(session.exec(stmt).all())
 
     def get_default_for_user(

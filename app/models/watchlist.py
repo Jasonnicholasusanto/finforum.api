@@ -16,6 +16,7 @@ class Watchlist(SQLModel, table=True):
     ORM mapping for public.watchlist.
     Mirrors your SQL DDL; does not attempt to create the enum type.
     """
+
     __tablename__ = "watchlist"
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="ux_watchlist_user_name"),
@@ -40,9 +41,9 @@ class Watchlist(SQLModel, table=True):
                 WatchlistVisibility,
                 name="watchlist_visibility",
                 schema="public",
-                create_type=False,                # reference existing DB type
+                create_type=False,  # reference existing DB type
                 values_callable=lambda e: [i.value for i in e],  # ← use values
-                validate_strings=True,            # catch bad strings early
+                validate_strings=True,  # catch bad strings early
             ),
             nullable=False,
             server_default=text("'private'::watchlist_visibility"),
