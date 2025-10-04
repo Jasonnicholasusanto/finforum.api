@@ -8,6 +8,7 @@ import re
 
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.]*$")
 
+
 # Shared base properties
 class UserProfileBase(SQLModel):
     model_config = ConfigDict(from_attributes=True)
@@ -28,9 +29,15 @@ class UserProfileCreate(UserProfileBase):
     @classmethod
     def validate_username(cls, v: str) -> str:
         if not USERNAME_REGEX.match(v):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username must start with a letter or number and may only contain letters, numbers, underscores, or dots")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must start with a letter or number and may only contain letters, numbers, underscores, or dots",
+            )
         if len(v) < 3 or len(v) > 30:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username must be between 3 and 30 characters")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must be between 3 and 30 characters",
+            )
         return v
 
 
@@ -54,9 +61,15 @@ class UserProfileUpdate(SQLModel):
         if v is None:
             return v
         if not USERNAME_REGEX.match(v):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username must start with a letter or number and may only contain letters, numbers, underscores, or dots")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must start with a letter or number and may only contain letters, numbers, underscores, or dots",
+            )
         if len(v) < 3 or len(v) > 30:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username must be between 3 and 30 characters")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must be between 3 and 30 characters",
+            )
         return v
 
 

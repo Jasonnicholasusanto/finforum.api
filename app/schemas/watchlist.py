@@ -18,6 +18,7 @@ class WatchlistVisibility(str, Enum):
 
 # ---------- SCHEMAS (Pydantic/SQLModel) ----------
 
+
 class WatchlistBase(SQLModel):
     name: str = Field(min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)

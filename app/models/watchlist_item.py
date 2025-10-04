@@ -13,6 +13,7 @@ class WatchlistItem(SQLModel, table=True):
     ORM mapping for public.watchlist_item.
     Mirrors your SQL DDL; does not attempt to create the table.
     """
+
     __tablename__ = "watchlist_item"
     __table_args__ = (
         # Mirrors chk_position_nonneg

@@ -12,6 +12,7 @@ async def login_user(email: EmailStr, password: SecretStr):
         raise Exception("Login failed")
     return result
 
+
 # async def login_user_google():
 #     supabase_instance = await get_supabase_anon_client()
 #     result = await supabase_instance.auth.sign_in_with_oauth({

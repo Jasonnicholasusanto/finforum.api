@@ -6,8 +6,13 @@ from app.crud.base import CRUDBase
 from app.models.watchlist_item import WatchlistItem
 from app.schemas.watchlist_item import WatchlistItemCreate, WatchlistItemUpdate
 
-class CRUDWatchlistItem(CRUDBase[WatchlistItem, WatchlistItemCreate, WatchlistItemUpdate]):
-    def list_by_watchlist(self, session: Session, *, watchlist_id: int) -> List[WatchlistItem]:
+
+class CRUDWatchlistItem(
+    CRUDBase[WatchlistItem, WatchlistItemCreate, WatchlistItemUpdate]
+):
+    def list_by_watchlist(
+        self, session: Session, *, watchlist_id: int
+    ) -> List[WatchlistItem]:
         stmt = (
             select(WatchlistItem)
             .where(WatchlistItem.watchlist_id == watchlist_id)
@@ -19,11 +24,17 @@ class CRUDWatchlistItem(CRUDBase[WatchlistItem, WatchlistItemCreate, WatchlistIt
         return list(session.exec(stmt).all())
 
     def create_many(
-        self, session: Session, *, watchlist_id: int, items: Iterable[WatchlistItemCreate]
+        self,
+        session: Session,
+        *,
+        watchlist_id: int,
+        items: Iterable[WatchlistItemCreate],
     ) -> List[WatchlistItem]:
         out: List[WatchlistItem] = []
         for it in items:
-            db_obj = WatchlistItem(**{**it.model_dump(exclude_unset=True), "watchlist_id": watchlist_id})
+            db_obj = WatchlistItem(
+                **{**it.model_dump(exclude_unset=True), "watchlist_id": watchlist_id}
+            )
             session.add(db_obj)
             out.append(db_obj)
         session.flush()
@@ -35,5 +46,6 @@ class CRUDWatchlistItem(CRUDBase[WatchlistItem, WatchlistItemCreate, WatchlistIt
             return False
         session.delete(obj)
         return True
+
 
 watchlist_item = CRUDWatchlistItem(WatchlistItem)

@@ -13,6 +13,7 @@ class PointRule(SQLModel, table=True):
     ORM mapping for public.point_rule (id BIGSERIAL PK).
     Managed by your DB; this model is read/write but does not create the table.
     """
+
     __tablename__ = "point_rule"
     __table_args__ = {"schema": "public", "keep_existing": True}
 

@@ -8,6 +8,7 @@ class UserDetailsResponse(SQLModel):
     profile: UserProfileMe
     activity: UserActivityPublic | None
 
+
 class UserDetailsPublic(SQLModel):
     profile: UserProfilePublic
     points: UserActivityPointsBreakdown | None

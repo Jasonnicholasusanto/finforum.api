@@ -5,7 +5,11 @@ from sqlmodel import Session
 
 from app.crud.user_activity import user_activity as user_activity_crud
 from app.models.user_activity import UserActivity
-from app.schemas.user_activity import UserActivityCreate, UserActivityPointsBreakdown, UserActivityPublic
+from app.schemas.user_activity import (
+    UserActivityCreate,
+    UserActivityPointsBreakdown,
+    UserActivityPublic,
+)
 
 
 def get_user_activity(
@@ -15,6 +19,7 @@ def get_user_activity(
     Return the ORM row for a given profile_id (FK = user_profile.id), or None.
     """
     return user_activity_crud.get_by_user_id(session, user_id=profile_id)
+
 
 def get_user_points(
     session: Session, *, profile_id: uuid.UUID
@@ -44,11 +49,8 @@ def get_user_activity_public(
     Return a serialized public schema for a given profile_id, or None.
     """
     row = get_user_activity(session, profile_id=profile_id)
-    return (
-        UserActivityPublic.model_validate(row, from_attributes=True)
-        if row
-        else None
-    )
+    return UserActivityPublic.model_validate(row, from_attributes=True) if row else None
+
 
 def create_user_activity(
     session: Session, *, profile_id: uuid.UUID, obj_in: UserActivityCreate

@@ -48,11 +48,13 @@ class UserActivityUpdate(SQLModel):
     weekly_points: Optional[NonNegInt] = None
     monthly_points: Optional[NonNegInt] = None
 
+
 class UserActivityPublic(UserActivityBase):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: uuid.UUID
     updated_at: datetime
+
 
 class UserActivityPointsBreakdown(SQLModel):
     model_config = ConfigDict(from_attributes=True)
