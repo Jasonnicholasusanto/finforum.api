@@ -23,7 +23,9 @@ async def get_alpha_vantage_ticker_data(symbol: str):
             return {"error": data["Error Message"]}
         return data
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.get("/yf/get-ticker-info/{symbol}")
@@ -33,7 +35,9 @@ async def get_ticker_info(symbol: str):
         info = ticker_data.info
         return TickerInfoResponse(**info)
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.post("/yf/get-tickers-info")
@@ -48,7 +52,9 @@ async def get_tickers_info(request: TickersRequest):
 
         return results
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.get("/yf/get-ticker-fast-info/{symbol}")
@@ -62,7 +68,9 @@ async def get_ticker_fast_info(symbol: str):
         )
         return fast_info
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.post("/yf/get-tickers-fast-info")
@@ -82,7 +90,9 @@ async def get_tickers_fast_info(request: TickersRequest):
 
         return {"results": results}
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.get("/yf/get-ticker-earnings/{symbol}")
@@ -90,19 +100,139 @@ async def get_ticker_earnings(symbol: str):
     try:
         ticker_data = yf.Ticker(symbol)
         earnings = ticker_data.earnings
+        if earnings is None or earnings.empty:
+            return {"symbol": symbol, "earnings": []}
+        earnings = earnings.fillna(0)
+        earnings = earnings.reset_index().to_dict(orient="records")
         return earnings
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.get("/yf/get-ticker-growth-estimates/{symbol}")
 async def get_ticker_growth_estimates(symbol: str):
     try:
         ticker_data = yf.Ticker(symbol)
-        growth_estimates = ticker_data.growth_estimates
-        return growth_estimates
+        ge = ticker_data.growth_estimates
+        if ge is None or ge.empty:
+            return {"symbol": symbol, "growth_estimates": []}
+        ge = ge.fillna(0)
+        ge = ge.reset_index().to_dict(orient="records")
+        return ge
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    
+
+@router.get("/yf/get-ticker-dividends/{symbol}")
+async def get_ticker_dividends(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        dividends = ticker.dividends
+        if dividends is None or dividends.empty:
+            return {"symbol": symbol, "dividends": []}
+        dividends = dividends.fillna(0)
+        dividends = ticker.dividends.reset_index().to_dict(orient="records")
+        return {"symbol": symbol, "dividends": dividends}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
+@router.get("/yf/get-ticker-splits/{symbol}")
+async def get_ticker_splits(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        splits = ticker.splits
+        if splits is None or splits.empty:
+            return {"symbol": symbol, "splits": []}
+        splits = splits.fillna(0)
+        splits = splits.reset_index().to_dict(orient="records")
+        return {"symbol": symbol, "splits": splits}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    
+
+@router.get("/yf/get-ticker-balance-sheet/{symbol}")
+async def get_balance_sheet(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        bs = ticker.balance_sheet
+        if bs is None or bs.empty:
+            return {"symbol": symbol, "balance_sheet": []}
+        bs = bs.fillna(0)
+        bs = bs.reset_index().to_dict(orient="records")
+        return {"symbol": symbol, "balance_sheet": bs}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
+@router.get("/yf/get-ticker-cashflow/{symbol}")
+async def get_cashflow(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        cf = ticker.cashflow
+        if cf is None or cf.empty:
+            return {"symbol": symbol, "cashflow": []}
+        cf = cf.fillna(0)
+        cf = cf.reset_index().to_dict(orient="records")
+        return {"symbol": symbol, "cashflow": cf}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
+@router.get("/yf/get-ticker-financials/{symbol}")
+async def get_financials(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        fin = ticker.financials
+        if fin is None or len(fin) == 0:
+            return {"symbol": symbol, "financials": {}}
+        return {"symbol": symbol, "financials": fin}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
+@router.get("/yf/get-sustainability/{symbol}")
+async def get_sustainability(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        sus = ticker.sustainability
+        if sus is None or len(sus) == 0:
+            return {"symbol": symbol, "sustainability": {}}
+        return {"symbol": symbol, "sustainability": sus}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    
+
+@router.get("/yf/get-calendar/{symbol}")
+async def get_calendar(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        cal = ticker.calendar
+        if not cal or len(cal) == 0:
+            return {"symbol": symbol, "calendar": {}}
+        return {"symbol": symbol, "calendar": cal}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
 
 
 ### Ticker Lookup and Search Endpoints
@@ -180,13 +310,31 @@ async def get_ticker_news(symbol: str):
         news = ticker_data.news
         return news
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
+### Recommendation Data Endpoints
+
+@router.get("/yf/get-analyst-recommendations/{symbol}")
+async def get_analyst_recommendations(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        recs = ticker.recommendations
+        if recs is None or recs.empty:
+            return {"symbol": symbol, "recommendations": []}
+        return {"symbol": symbol, "recommendations": recs.reset_index().to_dict(orient="records")}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 ### Stock History Data Endpoints
 
 
-@router.get("/get-ticker-history/{symbol}")
+@router.get("/get-ticker-history/{symbol}", description="Get historical market data for a given ticker symbol. Either start/end or period must be provided followed by interval.")
 async def get_ticker_history(
     symbol: str,
     interval: str = Query(
@@ -218,14 +366,14 @@ async def get_ticker_history(
     try:
         ticker_data = yf.Ticker(symbol)
 
-        if start and end:
+        if start and end and interval:
             history = ticker_data.history(interval=interval, start=start, end=end)
-        elif period:
+        elif period and interval:
             history = ticker_data.history(interval=interval, period=period)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Either start/end or period must be provided.",
+                detail="Either start/end or period must be provided followed by interval.",
             )
 
         if history.empty:
