@@ -95,6 +95,20 @@ async def get_tickers_fast_info(request: TickersRequest):
         )
 
 
+@router.get("/yf/get-ticker-major-holders/{symbol}")
+async def get_ticker_major_holders(symbol: str):
+    try:
+        ticker_data = yf.Ticker(symbol)
+        major_holders = ticker_data.major_holders
+        if major_holders is None or len(major_holders) == 0:
+            return {"symbol": symbol, "major_holders": {}}
+        return {"symbol": symbol, "major_holders": major_holders}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
 @router.get("/yf/get-ticker-earnings/{symbol}")
 async def get_ticker_earnings(symbol: str):
     try:
@@ -125,7 +139,7 @@ async def get_ticker_earnings_history(symbol: str):
         )
     
 
-@router.get("/yf/get-ticker-earnings-estimates/{symbol}")
+@router.get("/yf/get-ticker-earnings-estimate/{symbol}")
 async def get_ticker_earnings_estimates(symbol: str):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -140,6 +154,21 @@ async def get_ticker_earnings_estimates(symbol: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
+
+@router.get("/yf/get-ticker-revenue-estimate/{symbol}")
+async def get_ticker_revenue_estimates(symbol: str):
+    try:
+        ticker_data = yf.Ticker(symbol)
+        re = ticker_data.revenue_estimate
+        if re is None or re.empty:
+            return {"symbol": symbol, "revenue_estimate": []}
+        re = re.fillna(0)
+        re = re.reset_index().to_dict(orient="records")
+        return {"symbol": symbol, "revenue_estimate": re}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 @router.get("/yf/get-ticker-growth-estimates/{symbol}")
 async def get_ticker_growth_estimates(symbol: str):
@@ -235,7 +264,7 @@ async def get_financials(symbol: str):
         )
 
 
-@router.get("/yf/get-sustainability/{symbol}")
+@router.get("/yf/get-ticker-sustainability/{symbol}")
 async def get_sustainability(symbol: str):
     try:
         ticker = yf.Ticker(symbol)
@@ -249,7 +278,7 @@ async def get_sustainability(symbol: str):
         )
     
 
-@router.get("/yf/get-calendar/{symbol}")
+@router.get("/yf/get-ticker-calendar/{symbol}")
 async def get_calendar(symbol: str):
     try:
         ticker = yf.Ticker(symbol)
@@ -263,7 +292,7 @@ async def get_calendar(symbol: str):
         )
     
 
-@router.get("/yf/get-analyst-price-targets/{symbol}")
+@router.get("/yf/get-ticker-analyst-price-targets/{symbol}")
 async def get_analyst_price_targets(symbol: str):
     try:
         ticker = yf.Ticker(symbol)
@@ -360,7 +389,7 @@ async def get_ticker_news(symbol: str):
 
 ### Recommendation Data Endpoints
 
-@router.get("/yf/get-analyst-recommendations/{symbol}")
+@router.get("/yf/get-ticker-analyst-recommendations/{symbol}")
 async def get_analyst_recommendations(symbol: str):
     try:
         ticker = yf.Ticker(symbol)
