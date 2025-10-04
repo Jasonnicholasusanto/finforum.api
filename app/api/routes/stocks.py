@@ -109,6 +109,36 @@ async def get_ticker_earnings(symbol: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
+    
+
+@router.get("/yf/get-ticker-earnings-history/{symbol}")
+async def get_ticker_earnings_history(symbol: str):
+    try:
+        ticker_data = yf.Ticker(symbol)
+        eh = ticker_data.earnings_history
+        if eh is None or len(eh) == 0:
+            return {"symbol": symbol, "earnings_history": {}}
+        return {"symbol": symbol, "earnings_history": eh}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    
+
+@router.get("/yf/get-ticker-earnings-estimates/{symbol}")
+async def get_ticker_earnings_estimates(symbol: str):
+    try:
+        ticker_data = yf.Ticker(symbol)
+        ee = ticker_data.earnings_estimate
+        if ee is None or ee.empty:
+            return {"symbol": symbol, "earnings_estimates": []}
+        ee = ee.fillna(0)
+        ee = ee.reset_index().to_dict(orient="records")
+        return {"symbol": symbol, "earnings_estimates": ee}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.get("/yf/get-ticker-growth-estimates/{symbol}")
@@ -120,7 +150,7 @@ async def get_ticker_growth_estimates(symbol: str):
             return {"symbol": symbol, "growth_estimates": []}
         ge = ge.fillna(0)
         ge = ge.reset_index().to_dict(orient="records")
-        return ge
+        return {"symbol": symbol, "growth_estimates": ge}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
@@ -231,7 +261,20 @@ async def get_calendar(symbol: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
+    
 
+@router.get("/yf/get-analyst-price-targets/{symbol}")
+async def get_analyst_price_targets(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        apt = ticker.analyst_price_targets
+        if apt is None or len(apt) == 0:
+            return {"symbol": symbol, "analyst_price_targets": []}
+        return {"symbol": symbol, "analyst_price_targets": apt}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 
