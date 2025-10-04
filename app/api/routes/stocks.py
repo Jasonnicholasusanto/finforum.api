@@ -3,7 +3,7 @@ from fastapi.params import Query
 import yfinance as yf
 import requests
 from app.core.config import settings
-from app.models.stocks import TickersRequest
+from app.models.stocks import TickerFastInfoResponse, TickerInfoResponse, TickersRequest
 from app.utils.global_variables import STOCK_INTERVALS, STOCK_PERIODS
 
 
@@ -31,7 +31,7 @@ async def get_ticker_info(symbol: str):
     try:
         ticker_data = yf.Ticker(symbol)
         info = ticker_data.info
-        return info
+        return TickerInfoResponse(**info)
     except Exception as e:
         return {"error": str(e)}
 
@@ -40,10 +40,13 @@ async def get_ticker_info(symbol: str):
 async def get_tickers_info(request: TickersRequest):
     try:
         tickers_data = yf.Tickers(" ".join(request.symbols))
-        infos = {
-            symbol: tickers_data.tickers[symbol].info for symbol in request.symbols
-        }
-        return infos
+        results = {}
+
+        for symbol in request.symbols:
+            info = tickers_data.tickers[symbol].get_info()
+            results[symbol] = TickerInfoResponse(**info)
+
+        return results
     except Exception as e:
         return {"error": str(e)}
 
@@ -53,6 +56,10 @@ async def get_ticker_fast_info(symbol: str):
     try:
         ticker_data = yf.Ticker(symbol)
         fast_info = ticker_data.fast_info
+        fast_info = TickerFastInfoResponse(
+            symbol=symbol.upper(),
+            **fast_info
+        )
         return fast_info
     except Exception as e:
         return {"error": str(e)}
@@ -62,10 +69,18 @@ async def get_ticker_fast_info(symbol: str):
 async def get_tickers_fast_info(request: TickersRequest):
     try:
         tickers_data = yf.Tickers(" ".join(request.symbols))
-        infos = {
-            symbol: tickers_data.tickers[symbol].fast_info for symbol in request.symbols
-        }
-        return infos
+        results = {}
+        for symbol in request.symbols:
+            try:
+                fi = tickers_data.tickers[symbol].fast_info
+                results[symbol] = TickerFastInfoResponse(
+                    symbol=symbol.upper(),
+                    **fi
+                )
+            except Exception as inner_e:
+                results[symbol] = {"error": str(inner_e)}
+
+        return {"results": results}
     except Exception as e:
         return {"error": str(e)}
 
@@ -170,6 +185,7 @@ async def get_ticker_news(symbol: str):
 
 ### Stock History Data Endpoints
 
+
 @router.get("/get-ticker-history/{symbol}")
 async def get_ticker_history(
     symbol: str,
@@ -184,7 +200,6 @@ async def get_ticker_history(
         description=f"Alternative to start/end: {', '.join(list(STOCK_INTERVALS))}",
     ),
 ):
-    print(f"Fetching history for {symbol} with interval {interval}, start {start}, end {end}, period {period}")
     if interval not in STOCK_INTERVALS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
