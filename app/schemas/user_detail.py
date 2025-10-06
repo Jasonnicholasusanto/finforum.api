@@ -7,8 +7,12 @@ from app.schemas.user_profile import UserProfileMe, UserProfilePublic
 class UserDetailsResponse(SQLModel):
     profile: UserProfileMe
     activity: UserActivityPublic | None
+    followers_count: int = 0
+    following_count: int = 0
 
 
 class UserDetailsPublic(SQLModel):
     profile: UserProfilePublic
     points: UserActivityPointsBreakdown | None
+    # followers_count: int = 0
+    # following_count: int = 0

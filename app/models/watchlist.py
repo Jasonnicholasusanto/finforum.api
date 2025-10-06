@@ -20,7 +20,7 @@ class Watchlist(SQLModel, table=True):
     __tablename__ = "watchlist"
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="ux_watchlist_user_name"),
-        {"schema": "public", "keep_existing": True},
+        {"schema": "public"},
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)

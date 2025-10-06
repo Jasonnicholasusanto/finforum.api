@@ -16,6 +16,7 @@ class UserProfile(SQLModel, table=True):
     """
 
     __tablename__ = "user_profile"
+    __table_args__ = {"schema": "public"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     auth_id: uuid.UUID = Field(

@@ -23,6 +23,10 @@ from app.services.user_activity_service import (
     get_user_activity,
     create_user_activity,
 )
+from app.services.user_follow_service import (
+    get_followers_count,
+    get_following_count,
+)
 from app.utils.global_variables import RESERVED
 
 
@@ -56,11 +60,17 @@ def get_my_profile(user: CurrentUser, db: SessionDep):
             obj_in=UserActivityCreate(),
         )
 
+    # 3) Followers and Following counts
+    followers_count = get_followers_count(db, user_id=profile.id)
+    following_count = get_following_count(db, user_id=profile.id)
+
     return UserDetailsResponse(
         profile=UserProfileMe.model_validate(profile, from_attributes=True),
         activity=UserActivityPublic.model_validate(activity, from_attributes=True)
         if activity
         else None,
+        followers_count=followers_count or 0,
+        following_count=following_count or 0,
     )
 
 
