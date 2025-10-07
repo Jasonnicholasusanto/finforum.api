@@ -14,5 +14,5 @@ class UserDetailsResponse(SQLModel):
 class UserDetailsPublic(SQLModel):
     profile: UserProfilePublic
     points: UserActivityPointsBreakdown | None
-    # followers_count: int = 0
-    # following_count: int = 0
+    followers_count: int = 0
+    following_count: int = 0
