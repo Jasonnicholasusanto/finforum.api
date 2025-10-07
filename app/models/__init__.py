@@ -8,5 +8,6 @@
 from .auth import User
 from .user_profile import UserProfile
 from .user_activity import UserActivity
+from .user_follow import UserFollow
 
-__all__ = ["User", "UserProfile", "UserActivity"]
+__all__ = ["User", "UserProfile", "UserActivity", "UserFollow"]

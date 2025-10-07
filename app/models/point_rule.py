@@ -15,7 +15,7 @@ class PointRule(SQLModel, table=True):
     """
 
     __tablename__ = "point_rule"
-    __table_args__ = {"schema": "public", "keep_existing": True}
+    __table_args__ = {"schema": "public"}
 
     id: int = Field(primary_key=True)
     source: PointRuleSource = Field(index=True)

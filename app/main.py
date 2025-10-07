@@ -2,6 +2,7 @@ import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from sqlmodel import SQLModel
 import uvicorn
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
@@ -17,11 +18,16 @@ logger = logging.getLogger("uvicorn")
 
 def register_models():
     # Importing these attaches tables to SQLModel.metadata (side effects)
-    from app.models import (
-        auth as _auth,
-        user_profile as _user_profile,
-        user_activity as _user_activity,
-    )  # noqa F401
+    if not SQLModel.metadata.tables:
+        from app.models import (
+            auth as _auth,
+            user_profile as _user_profile,
+            user_activity as _user_activity,
+            user_follow as _user_follow,
+        )
+        logger.info("Models registered to SQLModel metadata.")
+    else:
+        logger.info("Models already registered.")
 
     return True
 

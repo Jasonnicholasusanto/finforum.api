@@ -1,3 +1,4 @@
+from typing import List
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Response, status
 
@@ -6,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.user_activity import UserActivityCreate, UserActivityPublic
 from app.schemas.user_detail import UserDetailsResponse
+from app.schemas.user_follow import PaginatedFollowersResponse
 from app.schemas.user_profile import (
     UserProfileCreate,
     UserProfileMe,
@@ -22,6 +24,12 @@ from app.services.user_profile_service import (
 from app.services.user_activity_service import (
     get_user_activity,
     create_user_activity,
+)
+from app.services.user_follow_service import (
+    get_followers,
+    get_followers_count,
+    get_following,
+    get_following_count,
 )
 from app.utils.global_variables import RESERVED
 
@@ -56,11 +64,68 @@ def get_my_profile(user: CurrentUser, db: SessionDep):
             obj_in=UserActivityCreate(),
         )
 
+    # 3) Followers and Following counts
+    followers_count = get_followers_count(db, user_id=profile.id)
+    following_count = get_following_count(db, user_id=profile.id)
+
     return UserDetailsResponse(
         profile=UserProfileMe.model_validate(profile, from_attributes=True),
         activity=UserActivityPublic.model_validate(activity, from_attributes=True)
         if activity
         else None,
+        followers_count=followers_count or 0,
+        following_count=following_count or 0,
+    )
+
+@router.get("/followers", response_model=PaginatedFollowersResponse)
+def list_followers(user: CurrentUser, db: SessionDep = None, limit: int = 20,
+    offset: int = 0):
+    """
+    Returns list of users who follow the given user.
+    """
+    # auth user id from JWT dependency; handle either .user_id or .id
+    auth_user_id = getattr(user, "user_id", None) or getattr(user, "id", None)
+    if not auth_user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # 1) Profile by auth_id (FK to auth.users.id)
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    total = get_followers_count(db, profile.id)
+    followers = get_followers(db, profile.id, limit=limit, offset=offset)
+    return PaginatedFollowersResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        data=[UserProfilePublic.model_validate(u, from_attributes=True) for u in followers],
+    )
+
+
+@router.get("/following", response_model=PaginatedFollowersResponse)
+def list_following(user: CurrentUser, db: SessionDep = None, limit: int = 20,
+    offset: int = 0):
+    """
+    Returns list of users the given user is following.
+    """
+    # auth user id from JWT dependency; handle either .user_id or .id
+    auth_user_id = getattr(user, "user_id", None) or getattr(user, "id", None)
+    if not auth_user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # 1) Profile by auth_id (FK to auth.users.id)
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    total = get_following_count(db, profile.id)
+    following = get_following(db, profile.id, limit=limit, offset=offset)
+    return PaginatedFollowersResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        data=[UserProfilePublic.model_validate(u, from_attributes=True) for u in following],
     )
 
 
@@ -92,18 +157,18 @@ def create_my_profile(
             status_code=status.HTTP_409_CONFLICT, detail="User Profile already exists"
         )
 
-    # 2b) Prevent duplicate username
+    # 3) Prevent duplicate username
     exists = _username_exists(session=db, username=payload.username)
     if exists:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Username already taken"
         )
 
-    # 3) Build the create DTO (server never accepts auth_id from client)
+    # 4) Build the create DTO (server never accepts auth_id from client)
     profile_in = UserProfileCreate(**payload.model_dump(exclude_unset=True))
     profile_in.email_address = user.email
 
-    # 4) Create via service
+    # 5) Create via user profile service
     try:
         profile = create_user_profile(
             db,
@@ -116,10 +181,33 @@ def create_my_profile(
             detail="Username, phone number, or email already in use",
         )
 
+    # 6) Ensure profile creation succeeded
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create profile",
+        )
+    
+    # 7) Create an empty activity record for the new user
+    try:
+        activity = get_user_activity(db, profile_id=profile.id)
+        if not activity:
+            activity = create_user_activity(
+                db,
+                profile_id=profile.id,
+                obj_in=UserActivityCreate(),
+            )
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to create user activity",
+        )
+    
+    # 8) Ensure activity creation succeeded
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create user activity",
         )
 
     return UserProfilePublic.model_validate(profile, from_attributes=True)

@@ -15,11 +15,11 @@ class UserActivity(SQLModel, table=True):
     """
 
     __tablename__ = "user_activity"
-    __table_args__ = {"schema": "public", "keep_existing": True}
+    __table_args__ = {"schema": "public"}
 
     user_id: uuid.UUID = Field(
         primary_key=True,
-        foreign_key="user_profile.id",
+        foreign_key="public.user_profile.id",
         nullable=False,
     )
 

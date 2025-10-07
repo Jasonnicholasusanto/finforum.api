@@ -23,7 +23,7 @@ class WatchlistItem(SQLModel, table=True):
         ),
         # Handy composite index for ordered lists (optional, matches common queries)
         Index("ix_watchlist_item_watchlist_position", "watchlist_id", "position"),
-        {"schema": "public", "keep_existing": True},
+        {"schema": "public"},
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
