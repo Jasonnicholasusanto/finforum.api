@@ -29,7 +29,7 @@ async def get_alpha_vantage_ticker_data(symbol: str, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-info/{symbol}")
+@router.get("/get-ticker-info/{symbol}")
 async def get_ticker_info(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -41,7 +41,7 @@ async def get_ticker_info(symbol: str, user: CurrentUser):
         )
 
 
-@router.post("/yf/get-tickers-info")
+@router.post("/get-tickers-info")
 async def get_tickers_info(request: TickersRequest, user: CurrentUser):
     try:
         tickers_data = yf.Tickers(" ".join(request.symbols))
@@ -58,7 +58,7 @@ async def get_tickers_info(request: TickersRequest, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-fast-info/{symbol}")
+@router.get("/get-ticker-fast-info/{symbol}")
 async def get_ticker_fast_info(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -74,7 +74,7 @@ async def get_ticker_fast_info(symbol: str, user: CurrentUser):
         )
 
 
-@router.post("/yf/get-tickers-fast-info")
+@router.post("/get-tickers-fast-info")
 async def get_tickers_fast_info(request: TickersRequest, user: CurrentUser):
     try:
         tickers_data = yf.Tickers(" ".join(request.symbols))
@@ -96,7 +96,7 @@ async def get_tickers_fast_info(request: TickersRequest, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-major-holders/{symbol}")
+@router.get("/get-ticker-major-holders/{symbol}")
 async def get_ticker_major_holders(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -110,7 +110,7 @@ async def get_ticker_major_holders(symbol: str, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-earnings/{symbol}")
+@router.get("/get-ticker-earnings/{symbol}")
 async def get_ticker_earnings(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -126,7 +126,7 @@ async def get_ticker_earnings(symbol: str, user: CurrentUser):
         )
     
 
-@router.get("/yf/get-ticker-earnings-history/{symbol}")
+@router.get("/get-ticker-earnings-history/{symbol}")
 async def get_ticker_earnings_history(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -140,7 +140,7 @@ async def get_ticker_earnings_history(symbol: str, user: CurrentUser):
         )
     
 
-@router.get("/yf/get-ticker-earnings-estimate/{symbol}")
+@router.get("/get-ticker-earnings-estimate/{symbol}")
 async def get_ticker_earnings_estimates(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -156,7 +156,7 @@ async def get_ticker_earnings_estimates(symbol: str, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-revenue-estimate/{symbol}")
+@router.get("/get-ticker-revenue-estimate/{symbol}")
 async def get_ticker_revenue_estimates(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -171,7 +171,7 @@ async def get_ticker_revenue_estimates(symbol: str, user: CurrentUser):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
-@router.get("/yf/get-ticker-growth-estimates/{symbol}")
+@router.get("/get-ticker-growth-estimates/{symbol}")
 async def get_ticker_growth_estimates(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -187,7 +187,7 @@ async def get_ticker_growth_estimates(symbol: str, user: CurrentUser):
         )
     
 
-@router.get("/yf/get-ticker-dividends/{symbol}")
+@router.get("/get-ticker-dividends/{symbol}")
 async def get_ticker_dividends(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -203,7 +203,7 @@ async def get_ticker_dividends(symbol: str, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-splits/{symbol}")
+@router.get("/get-ticker-splits/{symbol}")
 async def get_ticker_splits(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -219,7 +219,7 @@ async def get_ticker_splits(symbol: str, user: CurrentUser):
         )
     
 
-@router.get("/yf/get-ticker-balance-sheet/{symbol}")
+@router.get("/get-ticker-balance-sheet/{symbol}")
 async def get_balance_sheet(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -235,7 +235,7 @@ async def get_balance_sheet(symbol: str, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-cashflow/{symbol}")
+@router.get("/get-ticker-cashflow/{symbol}")
 async def get_cashflow(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -251,7 +251,7 @@ async def get_cashflow(symbol: str, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-financials/{symbol}")
+@router.get("/get-ticker-financials/{symbol}")
 async def get_financials(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -265,7 +265,7 @@ async def get_financials(symbol: str, user: CurrentUser):
         )
 
 
-@router.get("/yf/get-ticker-sustainability/{symbol}")
+@router.get("/get-ticker-sustainability/{symbol}")
 async def get_sustainability(symbol: str):
     try:
         ticker = yf.Ticker(symbol)
@@ -279,7 +279,7 @@ async def get_sustainability(symbol: str):
         )
     
 
-@router.get("/yf/get-ticker-calendar/{symbol}")
+@router.get("/get-ticker-calendar/{symbol}")
 async def get_calendar(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -293,7 +293,7 @@ async def get_calendar(symbol: str, user: CurrentUser):
         )
     
 
-@router.get("/yf/get-ticker-analyst-price-targets/{symbol}")
+@router.get("/get-ticker-analyst-price-targets/{symbol}")
 async def get_analyst_price_targets(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -311,7 +311,7 @@ async def get_analyst_price_targets(symbol: str, user: CurrentUser):
 ### Ticker Lookup and Search Endpoints
 
 
-@router.get("/yf/lookup/{query}")
+@router.get("/lookup/{query}")
 async def lookup_tickers(
     query: str, user: CurrentUser, count: int = Query(10, description="Number of results to return"),
 ):
@@ -338,7 +338,7 @@ async def lookup_tickers(
         )
 
 
-@router.get("/yf/search/{query}")
+@router.get("/search/{query}")
 async def search_tickers(query: str, user: CurrentUser):
     try:
         # Create Search object
@@ -376,7 +376,7 @@ async def search_tickers(query: str, user: CurrentUser):
 ### News Data Endpoints
 
 
-@router.get("/yf/get-ticker-news/{symbol}")
+@router.get("/get-ticker-news/{symbol}")
 async def get_ticker_news(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
@@ -388,9 +388,9 @@ async def get_ticker_news(symbol: str, user: CurrentUser):
         )
 
 
-### Recommendation Data Endpoints
+### Analyst Recommendation Data Endpoints
 
-@router.get("/yf/get-ticker-analyst-recommendations/{symbol}")
+@router.get("/get-ticker-analyst-recommendations/{symbol}")
 async def get_analyst_recommendations(symbol: str, user: CurrentUser):
     try:
         ticker = yf.Ticker(symbol)
@@ -403,6 +403,21 @@ async def get_analyst_recommendations(symbol: str, user: CurrentUser):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
+
+### Analyst Recommendation Summary Endpoint
+
+@router.get("yf/get-ticker-analyst-recommendations-summary/{symbol}")
+async def get_analyst_recommendations_summary(symbol: str, user: CurrentUser):
+    try:
+        ticker = yf.Ticker(symbol)
+        ars = ticker.recommendations_summary
+        if ars is None or ars.empty:
+            return {"symbol": symbol, "recommendations_summary": []}
+        return {"symbol": symbol, "recommendations_summary": ars.reset_index().to_dict(orient="records")}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 ### Stock History Data Endpoints
 
