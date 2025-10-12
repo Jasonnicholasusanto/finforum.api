@@ -3,12 +3,13 @@ import yfinance as yf
 from fastapi import HTTPException
 
 from app.api.deps import CurrentUser
+from app.models.stocks import ScreenTickerInfo
 
 
 router = APIRouter(prefix="/screen", tags=["screener"])
 
 @router.get("/predefined-queries")
-async def get_predefined_queries():
+async def get_predefined_queries(user: CurrentUser):
     """
     Retrieve a list of predefined screener queries available in yfinance.
     """
@@ -19,7 +20,7 @@ async def get_predefined_queries():
     return {"predefined_queries_list": psq_dict, "predefined_queries": psq}
 
 @router.get("/trending/{category}")
-async def get_trending_stocks(category: str, limit: int = 25):
+async def get_trending_stocks(user: CurrentUser, category: str, limit: int = 25):
     """
     Fetch trending stocks by category using Yahoo Finance screener.
     Categories include: day_gainers, day_losers, most_actives, undervalued_growth_stocks, etc.
@@ -41,17 +42,8 @@ async def get_trending_stocks(category: str, limit: int = 25):
             "category": category,
             "count": total,
             "results": [
-                {
-                    "symbol": q.get("symbol"),
-                    "name": q.get("shortName"),
-                    "price": q.get("regularMarketPrice"),
-                    "change_percent": q.get("regularMarketChangePercent"),
-                    "volume": q.get("regularMarketVolume"),
-                    "market_cap": q.get("marketCap"),
-                    "sector": q.get("sector"),
-                    "exchange": q.get("fullExchangeName"),
-                }
-                for q in quotes
+                ScreenTickerInfo(**quote)
+                for quote in quotes
             ],
         }
 
