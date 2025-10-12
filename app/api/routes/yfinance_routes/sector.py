@@ -1,6 +1,7 @@
 import json
 from fastapi import APIRouter, HTTPException, status
 import yfinance as yf
+from app.api.deps import CurrentUser
 from app.models.stocks import TickerInfoResponse
 from app.utils.global_variables import SECTOR_INDUSTRY_MAP
 
@@ -8,14 +9,14 @@ from app.utils.global_variables import SECTOR_INDUSTRY_MAP
 router = APIRouter(prefix="/sector", tags=["sector"])
 
 @router.get("/list")
-async def get_sector_industry_list():
+async def get_sector_list(user: CurrentUser):
     """
     Retrieve a list of market sectors.
     """
-    return {'sector_industry_map': SECTOR_INDUSTRY_MAP}
+    return {'sector_industry_map': list(SECTOR_INDUSTRY_MAP.keys())}
 
-@router.get("/industries/{sector}")
-async def get_industries_by_sector(sector: str):
+@router.get("/{sector}/industries")
+async def get_industries_by_sector(sector: str, user: CurrentUser):
     """
     Retrieve a list of industries for a given sector.
     """
@@ -27,7 +28,7 @@ async def get_industries_by_sector(sector: str):
     return {"sector": sector, "industries": industries}
 
 @router.get("/info/{sector}")
-async def get_sector_info(sector: str):
+async def get_sector_info(sector: str, user: CurrentUser):
     """
     Retrieve summary information for a given sector using Yahoo Finance.
     """
@@ -44,9 +45,6 @@ async def get_sector_info(sector: str):
             "overview": sector_data.overview,
             "research_reports": sector_data.research_reports,
             "sector_info": TickerInfoResponse(**sector_data.ticker.info).model_dump(),
-            # "top_companies": sector_data.top_companies,
-            # "top_etfs": sector_data.top_etfs,
-            # "top_mutual_funds": sector_data.top_mutual_funds,
         }
 
         response_data = json.loads(json.dumps(response_data, default=str))
@@ -57,7 +55,7 @@ async def get_sector_info(sector: str):
         )
     
 @router.get("/top-companies/{sector}")
-async def get_sector_top_companies(sector: str, limit: int = 25):
+async def get_sector_top_companies(sector: str, user: CurrentUser, limit: int = 25):
     """
     Retrieve top companies in a given sector using Yahoo Finance.
     """
@@ -83,7 +81,7 @@ async def get_sector_top_companies(sector: str, limit: int = 25):
         )
     
 @router.get("/top-etfs/{sector}")
-async def get_sector_top_etfs(sector: str, limit: int = 25):
+async def get_sector_top_etfs(sector: str, user: CurrentUser, limit: int = 25):
     """
     Retrieve top ETFs in a given sector using Yahoo Finance.
     """
@@ -114,7 +112,7 @@ async def get_sector_top_etfs(sector: str, limit: int = 25):
         )
     
 @router.get("/top-mutual-funds/{sector}")
-async def get_sector_top_mutual_funds(sector: str, limit: int = 25):
+async def get_sector_top_mutual_funds(sector: str, user: CurrentUser, limit: int = 25):
         """
         Retrieve top mutual funds in a given sector using Yahoo Finance.
         """
