@@ -23,9 +23,12 @@ async def get_alpha_vantage_ticker_data(symbol: str, user: CurrentUser):
         if "Error Message" in data:
             return {"error": data["Error Message"]}
         return data
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -35,9 +38,12 @@ async def get_ticker_info(symbol: str, user: CurrentUser):
         ticker_data = yf.Ticker(symbol)
         info = ticker_data.info
         return TickerInfoResponse(**info)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -52,9 +58,12 @@ async def get_tickers_info(request: TickersRequest, user: CurrentUser):
             results[symbol] = TickerInfoResponse(**info)
 
         return results
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -62,15 +71,21 @@ async def get_tickers_info(request: TickersRequest, user: CurrentUser):
 async def get_ticker_fast_info(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
+
+        print(ticker_data.fast_info)
+
         fast_info = ticker_data.fast_info
         fast_info = TickerFastInfoResponse(
             symbol=symbol.upper(),
             **fast_info
         )
         return fast_info
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -90,9 +105,12 @@ async def get_tickers_fast_info(request: TickersRequest, user: CurrentUser):
                 results[symbol] = {"error": str(inner_e)}
 
         return {"results": results}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -104,9 +122,12 @@ async def get_ticker_major_holders(symbol: str, user: CurrentUser):
         if major_holders is None or len(major_holders) == 0:
             return {"symbol": symbol, "major_holders": {}}
         return {"symbol": symbol, "major_holders": major_holders}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -120,9 +141,12 @@ async def get_ticker_earnings(symbol: str, user: CurrentUser):
         earnings = earnings.fillna(0)
         earnings = earnings.reset_index().to_dict(orient="records")
         return earnings
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
     
 
@@ -134,9 +158,12 @@ async def get_ticker_earnings_history(symbol: str, user: CurrentUser):
         if eh is None or len(eh) == 0:
             return {"symbol": symbol, "earnings_history": {}}
         return {"symbol": symbol, "earnings_history": eh}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
     
 
@@ -150,9 +177,12 @@ async def get_ticker_earnings_estimates(symbol: str, user: CurrentUser):
         ee = ee.fillna(0)
         ee = ee.reset_index().to_dict(orient="records")
         return {"symbol": symbol, "earnings_estimates": ee}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -166,9 +196,12 @@ async def get_ticker_revenue_estimates(symbol: str, user: CurrentUser):
         re = re.fillna(0)
         re = re.reset_index().to_dict(orient="records")
         return {"symbol": symbol, "revenue_estimate": re}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 @router.get("/get-ticker-growth-estimates/{symbol}")
@@ -181,9 +214,12 @@ async def get_ticker_growth_estimates(symbol: str, user: CurrentUser):
         ge = ge.fillna(0)
         ge = ge.reset_index().to_dict(orient="records")
         return {"symbol": symbol, "growth_estimates": ge}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
     
 
@@ -197,9 +233,12 @@ async def get_ticker_dividends(symbol: str, user: CurrentUser):
         dividends = dividends.fillna(0)
         dividends = ticker.dividends.reset_index().to_dict(orient="records")
         return {"symbol": symbol, "dividends": dividends}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -213,9 +252,12 @@ async def get_ticker_splits(symbol: str, user: CurrentUser):
         splits = splits.fillna(0)
         splits = splits.reset_index().to_dict(orient="records")
         return {"symbol": symbol, "splits": splits}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
     
 
@@ -229,9 +271,12 @@ async def get_balance_sheet(symbol: str, user: CurrentUser):
         bs = bs.fillna(0)
         bs = bs.reset_index().to_dict(orient="records")
         return {"symbol": symbol, "balance_sheet": bs}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -245,9 +290,12 @@ async def get_cashflow(symbol: str, user: CurrentUser):
         cf = cf.fillna(0)
         cf = cf.reset_index().to_dict(orient="records")
         return {"symbol": symbol, "cashflow": cf}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -259,9 +307,12 @@ async def get_financials(symbol: str, user: CurrentUser):
         if fin is None or len(fin) == 0:
             return {"symbol": symbol, "financials": {}}
         return {"symbol": symbol, "financials": fin}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -273,9 +324,12 @@ async def get_sustainability(symbol: str):
         if sus is None or len(sus) == 0:
             return {"symbol": symbol, "sustainability": {}}
         return {"symbol": symbol, "sustainability": sus}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
     
 
@@ -287,9 +341,12 @@ async def get_calendar(symbol: str, user: CurrentUser):
         if not cal or len(cal) == 0:
             return {"symbol": symbol, "calendar": {}}
         return {"symbol": symbol, "calendar": cal}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
     
 
@@ -301,9 +358,12 @@ async def get_analyst_price_targets(symbol: str, user: CurrentUser):
         if apt is None or len(apt) == 0:
             return {"symbol": symbol, "analyst_price_targets": []}
         return {"symbol": symbol, "analyst_price_targets": apt}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -332,9 +392,12 @@ async def lookup_tickers(
 
         return {"query": query, "results": results}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
 
 
@@ -367,9 +430,12 @@ async def search_tickers(query: str, user: CurrentUser):
 
         return {"query": query, "results": results}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
 
 
@@ -382,9 +448,12 @@ async def get_ticker_news(symbol: str, user: CurrentUser):
         ticker_data = yf.Ticker(symbol)
         news = ticker_data.news
         return news
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -398,9 +467,12 @@ async def get_analyst_recommendations(symbol: str, user: CurrentUser):
         if recs is None or recs.empty:
             return {"symbol": symbol, "recommendations": []}
         return {"symbol": symbol, "recommendations": recs.reset_index().to_dict(orient="records")}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 
@@ -414,9 +486,12 @@ async def get_analyst_recommendations_summary(symbol: str, user: CurrentUser):
         if ars is None or ars.empty:
             return {"symbol": symbol, "recommendations_summary": []}
         return {"symbol": symbol, "recommendations_summary": ars.reset_index().to_dict(orient="records")}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )
 
 ### Stock History Data Endpoints
@@ -472,7 +547,10 @@ async def get_ticker_history(
         history_list = history.to_dict(orient="records")
 
         return {"symbol": symbol, "history": history_list}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
         )

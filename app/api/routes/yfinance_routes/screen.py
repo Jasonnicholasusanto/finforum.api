@@ -19,6 +19,14 @@ async def get_predefined_queries(user: CurrentUser):
 
     return {"predefined_queries_list": psq_dict, "predefined_queries": psq}
 
+
+@router.get("/valid-values")
+async def get_valid_values():
+    """
+    Retrieve a list of valid fields that can be used in screener queries.
+    """
+    return {"valid_fields": yf.EquityQuery.valid_values}
+
 @router.get("/trending/{category}")
 async def get_trending_stocks(user: CurrentUser, category: str, limit: int = 25):
     """

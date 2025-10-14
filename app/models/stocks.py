@@ -340,6 +340,7 @@ class TickerInfoResponse(BaseModel):
         None, description="Most recent fiscal quarter (epoch timestamp)"
     )
 
+
 class ScreenTickerInfo(BaseModel):
     symbol: str
     displayName: Optional[str] = Field(None, description="Display Name")

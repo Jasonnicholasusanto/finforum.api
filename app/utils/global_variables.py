@@ -123,6 +123,75 @@ STOCK_PERIODS = {"1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "ytd", "max"
 
 MARKETS = {"US", "GB", "ASIA", "EUROPE", "RATES", "COMMODITIES", "CURRENCIES", "CRYPTOCURRENCIES"}
 
+REGIONS = {
+    "ar", "at", "au", "be", "br", "ca", "ch", "cl", "cn", "co", "cz", "de", "dk", "ee", "eg", "es", 
+    "fi", "fr", "gb", "gr", "hk", "hu", "id", "ie", "il", "in", "is", "it", "jp", "kr", "kw", "lk", 
+    "lt", "lv", "mx", "my", "nl", "no", "nz", "pe", "ph", "pk", "pl", "pt", "qa", "ro", "ru", "sa", 
+    "se", "sg", "sr", "sw", "th", "tr", "tw", "us", "ve", "vn", "za"
+}
+
+EXCHANGES = {
+    "ar": ["BUE"],
+    "at": ["VIE"],
+    "au": ["ASX"],
+    "be": ["BRU"],
+    "br": ["SAO"],
+    "ca": ["CNQ", "NEO", "TOR", "VAN"],
+    "ch": ["EBS"],
+    "cl": ["SGO"],
+    "cn": ["SHH", "SHZ"],
+    "co": ["BVC"],
+    "cz": ["PRA"],
+    "de": ["BER", "DUS", "FRA", "GER", "HAM", "MUN", "STU"],
+    "dk": ["CPH"],
+    "ee": ["TAL"],
+    "eg": ["CAI"],
+    "es": ["MCE"],
+    "fi": ["HEL"],
+    "fr": ["PAR"],
+    "gb": ["AQS", "IOB", "LSE"],
+    "gr": ["ATH"],
+    "hk": ["HKG"],
+    "hu": ["BUD"],
+    "id": ["JKT"],
+    "ie": ["ISE"],
+    "il": ["TLV"],
+    "in": ["BSE", "NSI"],
+    "is": ["ICE"],
+    "it": ["MIL"],
+    "jp": ["FKA", "JPX", "SAP"],
+    "kr": ["KOE", "KSC"],
+    "kw": ["KUW"],
+    "lk": [],
+    "lt": ["LIT"],
+    "lv": ["RIS"],
+    "mx": ["MEX"],
+    "my": ["KLS"],
+    "nl": ["AMS"],
+    "no": ["OSL"],
+    "nz": ["NZE"],
+    "pe": [],
+    "ph": ["PHP", "PHS"],
+    "pk": [],
+    "pl": ["WSE"],
+    "pt": ["LIS"],
+    "qa": ["DOH"],
+    "ro": ["BVB"],
+    "ru": [],
+    "sa": ["SAU"],
+    "se": ["STO"],
+    "sg": ["SES"],
+    "sr": [],
+    "sw": ["EBS"],
+    "th": ["SET"],
+    "tr": ["IST"],
+    "tw": ["TAI", "TWO"],
+    "us": ["ASE", "BTS", "CXI", "NCM", "NGM", "NMS", "NYQ", "OEM", "OQB", "OQX", "PCX", "PNK", "YHD"],
+    "ve": ["CCS"],
+    "vn": [],
+    "za": ["JNB"]
+}
+
 SECTORS = {"basic-materials", "communication-services", "consumer-cyclical", "consumer-defensive", "energy", "financial-services", "healthcare", "industrials", "real-estate", "technology", "utilities"}
 
 SECTOR_INDUSTRY_MAP = {
