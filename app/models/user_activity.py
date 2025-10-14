@@ -1,11 +1,9 @@
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime
 import uuid
 from sqlmodel import SQLModel, Field
 
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from app.utils.functions import utcnow
 
 
 class UserActivity(SQLModel, table=True):
