@@ -1,6 +1,6 @@
-from typing import List
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Response, status
+import uuid
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
 # from supabase import create_async_client
 from sqlalchemy.exc import IntegrityError
@@ -19,7 +19,9 @@ from app.services.user_profile_service import (
     create_user_profile,
     get_user_profile,
     get_user_profile_by_auth,
+    update_user_background_picture,
     update_user_profile,
+    update_user_profile_picture,
 )
 from app.services.user_activity_service import (
     get_user_activity,
@@ -31,7 +33,14 @@ from app.services.user_follow_service import (
     get_following,
     get_following_count,
 )
-from app.utils.global_variables import RESERVED
+from app.utils.functions import extract_storage_path
+from app.utils.global_variables import (
+    MAX_PROFILE_PICTURE_FILE_SIZE_KB,
+    RESERVED,
+    MAX_BANNER_IMAGE_FILE_SIZE_KB,
+)
+from app.core.config import settings
+from supabase import create_client, Client
 
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -77,9 +86,11 @@ def get_my_profile(user: CurrentUser, db: SessionDep):
         following_count=following_count or 0,
     )
 
+
 @router.get("/followers", response_model=PaginatedFollowersResponse)
-def list_followers(user: CurrentUser, db: SessionDep = None, limit: int = 20,
-    offset: int = 0):
+def list_followers(
+    user: CurrentUser, db: SessionDep = None, limit: int = 20, offset: int = 0
+):
     """
     Returns list of users who follow the given user.
     """
@@ -92,20 +103,23 @@ def list_followers(user: CurrentUser, db: SessionDep = None, limit: int = 20,
     profile = get_user_profile_by_auth(db, auth_id=user.id)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
-    
+
     total = get_followers_count(db, profile.id)
     followers = get_followers(db, profile.id, limit=limit, offset=offset)
     return PaginatedFollowersResponse(
         total=total,
         limit=limit,
         offset=offset,
-        data=[UserProfilePublic.model_validate(u, from_attributes=True) for u in followers],
+        data=[
+            UserProfilePublic.model_validate(u, from_attributes=True) for u in followers
+        ],
     )
 
 
 @router.get("/following", response_model=PaginatedFollowersResponse)
-def list_following(user: CurrentUser, db: SessionDep = None, limit: int = 20,
-    offset: int = 0):
+def list_following(
+    user: CurrentUser, db: SessionDep = None, limit: int = 20, offset: int = 0
+):
     """
     Returns list of users the given user is following.
     """
@@ -118,14 +132,16 @@ def list_following(user: CurrentUser, db: SessionDep = None, limit: int = 20,
     profile = get_user_profile_by_auth(db, auth_id=user.id)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
-    
+
     total = get_following_count(db, profile.id)
     following = get_following(db, profile.id, limit=limit, offset=offset)
     return PaginatedFollowersResponse(
         total=total,
         limit=limit,
         offset=offset,
-        data=[UserProfilePublic.model_validate(u, from_attributes=True) for u in following],
+        data=[
+            UserProfilePublic.model_validate(u, from_attributes=True) for u in following
+        ],
     )
 
 
@@ -187,7 +203,7 @@ def create_my_profile(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create profile",
         )
-    
+
     # 7) Create an empty activity record for the new user
     try:
         activity = get_user_activity(db, profile_id=profile.id)
@@ -202,7 +218,7 @@ def create_my_profile(
             status_code=status.HTTP_409_CONFLICT,
             detail="Failed to create user activity",
         )
-    
+
     # 8) Ensure activity creation succeeded
     if not profile:
         raise HTTPException(
@@ -255,6 +271,260 @@ def update_my_profile(
         )
 
     return UserProfilePublic.model_validate(profile, from_attributes=True)
+
+
+# Authenticated: Upload banner picture
+@router.post("/upload-banner-image")
+async def upload_banner_image(
+    user: CurrentUser,
+    db: SessionDep,
+    file: UploadFile = File(...),
+):
+    """
+    Uploads a profile picture for the current user to Supabase Storage,
+    updates the user_profile table with the public URL, and returns it.
+    """
+    supabase: Client = create_client(
+        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
+    )
+
+    # 1. Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only image uploads are allowed.",
+        )
+
+    # 2. Validate file size
+    contents = await file.read()
+    if len(contents) > MAX_BANNER_IMAGE_FILE_SIZE_KB * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large (max {MAX_BANNER_IMAGE_FILE_SIZE_KB} KB).",
+        )
+
+    # 3. Get current user's profile
+    current_user = get_user_profile_by_auth(db, auth_id=user.id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found."
+        )
+
+    # 4. Generate unique filename
+    ext = file.filename.split(".")[-1]
+    unique_filename = f"{current_user.id}-{uuid.uuid4().hex}.{ext}"
+    file_path = f"{current_user.id}/{unique_filename}"
+
+    # 5. Upload to Supabase Storage
+    supabase.storage.from_("banner-images").upload(
+        path=file_path,
+        file=contents,
+        file_options={"cache-control": "3600", "upsert": "false"},
+    )
+
+    # 6. Delete old banner picture (if exists)
+    if current_user.background_picture:
+        old_path = extract_storage_path(
+            current_user.background_picture, "banner-images"
+        )
+        if old_path and old_path.startswith(str(current_user.id)):
+            supabase.storage.from_("banner-images").remove([old_path])
+
+    # 7. Get public URL
+    public_url = supabase.storage.from_("banner-images").get_public_url(file_path)
+
+    # 8. Update DB with new URL
+    try:
+        update_user_background_picture(
+            db, user_id=current_user.id, background_url=public_url
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update banner image URL in database: {str(e)}",
+        )
+
+    return {"banner_image_url": public_url}
+
+
+@router.delete("/delete-banner-image")
+async def delete_banner_image(
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Deletes all profile pictures of the current user from Supabase Storage,
+    and sets `profile_picture` to NULL in the `user_profile` table.
+    """
+    supabase: Client = create_client(
+        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
+    )
+
+    # 1. Get current user's profile
+    current_user = get_user_profile_by_auth(db, auth_id=user.id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found."
+        )
+
+    user_folder = str(current_user.id)
+
+    # 2. List all files in this user's folder inside "banner-images" bucket
+    try:
+        list_res = supabase.storage.from_("banner-images").list(path=user_folder)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list user's profile pictures: {str(e)}",
+        )
+
+    # 3. Delete all files found
+    if list_res:
+        file_paths = [f"{user_folder}/{item['name']}" for item in list_res]
+        try:
+            supabase.storage.from_("banner-images").remove(file_paths)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete files from storage: {str(e)}",
+            )
+
+    # 4. Update database to set background_picture = NULL
+    try:
+        update_user_background_picture(db, user_id=current_user.id, background_url=None)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update banner image in database: {str(e)}",
+        )
+
+    return {"message": "Banner image deleted successfully."}
+
+
+# Authenticated: Upload profile picture
+@router.post("/upload-profile-picture")
+async def upload_profile_picture(
+    user: CurrentUser,
+    db: SessionDep,
+    file: UploadFile = File(...),
+):
+    """
+    Uploads a profile picture for the current user to Supabase Storage,
+    updates the user_profile table with the public URL, and returns it.
+    """
+    supabase: Client = create_client(
+        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
+    )
+
+    # 1. Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only image uploads are allowed.",
+        )
+
+    # 2. Validate file size
+    contents = await file.read()
+    if len(contents) > MAX_PROFILE_PICTURE_FILE_SIZE_KB * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large (max {MAX_PROFILE_PICTURE_FILE_SIZE_KB} KB).",
+        )
+
+    # 3. Get current user's profile
+    current_user = get_user_profile_by_auth(db, auth_id=user.id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found."
+        )
+
+    # 4. Generate unique filename
+    ext = file.filename.split(".")[-1]
+    unique_filename = f"{current_user.id}-{uuid.uuid4().hex}.{ext}"
+    file_path = f"{current_user.id}/{unique_filename}"
+
+    # 5. Upload to Supabase Storage
+    supabase.storage.from_("profile-pictures").upload(
+        path=file_path,
+        file=contents,
+        file_options={"cache-control": "3600", "upsert": "false"},
+    )
+
+    # 6. Delete old profile picture (if exists)
+    if current_user.profile_picture:
+        old_path = extract_storage_path(
+            current_user.profile_picture, "profile-pictures"
+        )
+        if old_path and old_path.startswith(str(current_user.id)):
+            supabase.storage.from_("profile-pictures").remove([old_path])
+
+    # 7. Get public URL
+    public_url = supabase.storage.from_("profile-pictures").get_public_url(file_path)
+
+    # 8. Update DB with new URL
+    try:
+        update_user_profile_picture(db, user_id=current_user.id, picture_url=public_url)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update profile picture URL in database: {str(e)}",
+        )
+
+    return {"profile_picture_url": public_url}
+
+
+@router.delete("/delete-profile-picture")
+async def delete_profile_picture(
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Deletes all profile pictures of the current user from Supabase Storage,
+    and sets `profile_picture` to NULL in the `user_profile` table.
+    """
+    supabase: Client = create_client(
+        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
+    )
+
+    # 1. Get current user's profile
+    current_user = get_user_profile_by_auth(db, auth_id=user.id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found."
+        )
+
+    user_folder = str(current_user.id)
+
+    # 2. List all files in this user's folder inside "profile-pictures" bucket
+    try:
+        list_res = supabase.storage.from_("profile-pictures").list(path=user_folder)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list user's profile pictures: {str(e)}",
+        )
+
+    # 3. Delete all files found
+    if list_res:
+        file_paths = [f"{user_folder}/{item['name']}" for item in list_res]
+        try:
+            supabase.storage.from_("profile-pictures").remove(file_paths)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete files from storage: {str(e)}",
+            )
+
+    # 4. Update database to set profile_picture = NULL
+    try:
+        update_user_profile_picture(db, user_id=current_user.id, picture_url=None)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update profile picture in database: {str(e)}",
+        )
+
+    return {"message": "Profile picture deleted successfully."}
 
 
 # Authenticated: Soft delete my profile

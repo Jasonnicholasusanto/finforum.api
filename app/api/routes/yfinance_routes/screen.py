@@ -8,6 +8,7 @@ from app.models.stocks import ScreenTickerInfo
 
 router = APIRouter(prefix="/screen", tags=["screener"])
 
+
 @router.get("/predefined-queries")
 async def get_predefined_queries(user: CurrentUser):
     """
@@ -15,7 +16,7 @@ async def get_predefined_queries(user: CurrentUser):
     """
     psq = yf.PREDEFINED_SCREENER_QUERIES
     psq_list = set(psq.keys())
-    psq_dict = {key.replace('_', ' ').title(): key for key in psq_list}
+    psq_dict = {key.replace("_", " ").title(): key for key in psq_list}
 
     return {"predefined_queries_list": psq_dict, "predefined_queries": psq}
 
@@ -26,6 +27,7 @@ async def get_valid_values():
     Retrieve a list of valid fields that can be used in screener queries.
     """
     return {"valid_fields": yf.EquityQuery.valid_values}
+
 
 @router.get("/trending/{category}")
 async def get_trending_stocks(user: CurrentUser, category: str, limit: int = 25):
@@ -38,7 +40,7 @@ async def get_trending_stocks(user: CurrentUser, category: str, limit: int = 25)
     if category not in predefined:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid category. Valid options: {', '.join(predefined)}"
+            detail=f"Invalid category. Valid options: {', '.join(predefined)}",
         )
 
     try:
@@ -49,10 +51,7 @@ async def get_trending_stocks(user: CurrentUser, category: str, limit: int = 25)
         return {
             "category": category,
             "count": total,
-            "results": [
-                ScreenTickerInfo(**quote)
-                for quote in quotes
-            ],
+            "results": [ScreenTickerInfo(**quote) for quote in quotes],
         }
 
     except Exception as e:

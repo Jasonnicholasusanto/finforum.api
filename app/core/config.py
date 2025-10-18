@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     # NOTE: super user key is service_role key instead of the anon key
     SUPABASE_KEY: str
     SUPABASE_KEY_ANON: str
+    SUPABASE_SERVICE_KEY: str
 
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 6543

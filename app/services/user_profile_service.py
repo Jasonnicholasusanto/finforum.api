@@ -207,3 +207,42 @@ def get_me(session: Session, *, auth_id: uuid.UUID) -> Optional[UserProfileMe]:
     """
     obj = user_profile_crud.get_by_auth_id(session, auth_id=auth_id)
     return UserProfileMe.model_validate(obj) if obj else None
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Profile Picture Upload Handling
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def update_user_profile_picture(
+    db: Session, *, user_id: uuid.UUID, picture_url: str
+) -> None:
+    """
+    Update the profile picture for the given user in Postgres.
+    """
+    profile = db.exec(select(UserProfile).where(UserProfile.id == user_id)).first()
+    if not profile:
+        return None
+
+    profile.profile_picture = picture_url
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
+def update_user_background_picture(
+    db: Session, *, user_id: uuid.UUID, background_url: str
+) -> None:
+    """
+    Update the background picture for the given user in Postgres.
+    """
+    profile = db.exec(select(UserProfile).where(UserProfile.id == user_id)).first()
+    if not profile:
+        return None
+
+    profile.background_picture = background_url
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile

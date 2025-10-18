@@ -1,10 +1,14 @@
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
-from app.schemas.watchlist import WatchlistBase
+from app.schemas.watchlist import WatchlistBase, WatchlistCreate
 from app.schemas.watchlist_detail import WatchlistDetail, WatchlistsDetail
-from app.schemas.watchlist_item import WatchlistItemBase
+from app.schemas.watchlist_item import WatchlistItemBase, WatchlistItemCreate
 from app.services.watchlist_service import (
+    add_item_to_watchlist,
+    add_many_items_to_watchlist,
+    create_watchlist_for_user,
     load_items_for_watchlists,
     search_public_watchlists_by_name,
 )
@@ -54,3 +58,80 @@ def get_watchlists_by_name(
     ]
 
     return WatchlistsDetail(watchlists=results)
+
+
+@router.post("/", status_code=201)
+def create_watchlist(
+    user: CurrentUser,
+    db: SessionDep,
+    watchlist_data: WatchlistCreate,
+    items: Optional[List[WatchlistItemCreate]] = None,
+):
+    """
+    Create a new watchlist for the authenticated user.
+    Optionally accepts a list of initial watchlist items.
+    """
+    try:
+        # 1. Create the new watchlist
+        new_watchlist = create_watchlist_for_user(
+            db,
+            user_id=user.id,
+            watchlist_data=watchlist_data,
+        )
+
+        # 2. Add items if provided
+        new_items = []
+        if items:
+            new_items = add_many_items_to_watchlist(
+                session=db,
+                watchlist_id=new_watchlist.id,
+                items=items,
+            )
+
+        # 3. Return combined response
+        return {
+            "message": "Watchlist created successfully.",
+            "watchlist": new_watchlist,
+            "watchlist_items": new_items,
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create watchlist: {str(e)}",
+        )
+
+
+@router.post("/{watchlist_id}/items")
+def add_watchlist_item(
+    watchlist_id: int,
+    item: WatchlistItemCreate,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    # (optional) check if user can edit this watchlist
+    new_item = add_item_to_watchlist(
+        session=db,
+        watchlist_id=watchlist_id,
+        symbol=item.symbol,
+        exchange=item.exchange,
+        note=item.note,
+        position=item.position,
+    )
+    return {"message": "Item added successfully", "item": new_item}
+
+
+@router.post("/{watchlist_id}/items/bulk")
+def add_bulk_watchlist_items(
+    watchlist_id: int,
+    items: List[WatchlistItemCreate],
+    user: CurrentUser,
+    db: SessionDep,
+):
+    # Optional: validate ownership/edit rights before proceeding
+    new_items = add_many_items_to_watchlist(
+        session=db,
+        watchlist_id=watchlist_id,
+        items=items,
+    )
+    return {"count": len(new_items), "items": new_items}

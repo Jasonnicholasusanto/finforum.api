@@ -23,6 +23,25 @@ class CRUDWatchlistItem(
         )
         return list(session.exec(stmt).all())
 
+    def create(
+        self,
+        session: Session,
+        *,
+        watchlist_id: int,
+        obj_in: WatchlistItemCreate,
+    ) -> WatchlistItem:
+        """
+        Create a single WatchlistItem for the specified watchlist.
+        """
+        db_obj = WatchlistItem(
+            **obj_in.model_dump(exclude_unset=True),
+            watchlist_id=watchlist_id,
+        )
+        session.add(db_obj)
+        session.commit()
+        session.refresh(db_obj)
+        return db_obj
+
     def create_many(
         self,
         session: Session,

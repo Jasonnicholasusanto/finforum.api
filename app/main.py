@@ -25,6 +25,7 @@ def register_models():
             user_activity as _user_activity,
             user_follow as _user_follow,
         )
+
         logger.info("Models registered to SQLModel metadata.")
     else:
         logger.info("Models already registered.")

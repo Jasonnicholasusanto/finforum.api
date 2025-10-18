@@ -28,7 +28,7 @@ async def get_alpha_vantage_ticker_data(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -43,7 +43,7 @@ async def get_ticker_info(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -63,7 +63,7 @@ async def get_tickers_info(request: TickersRequest, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -75,17 +75,14 @@ async def get_ticker_fast_info(symbol: str, user: CurrentUser):
         print(ticker_data.fast_info)
 
         fast_info = ticker_data.fast_info
-        fast_info = TickerFastInfoResponse(
-            symbol=symbol.upper(),
-            **fast_info
-        )
+        fast_info = TickerFastInfoResponse(symbol=symbol.upper(), **fast_info)
         return fast_info
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -97,10 +94,7 @@ async def get_tickers_fast_info(request: TickersRequest, user: CurrentUser):
         for symbol in request.symbols:
             try:
                 fi = tickers_data.tickers[symbol].fast_info
-                results[symbol] = TickerFastInfoResponse(
-                    symbol=symbol.upper(),
-                    **fi
-                )
+                results[symbol] = TickerFastInfoResponse(symbol=symbol.upper(), **fi)
             except Exception as inner_e:
                 results[symbol] = {"error": str(inner_e)}
 
@@ -110,7 +104,7 @@ async def get_tickers_fast_info(request: TickersRequest, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -127,7 +121,7 @@ async def get_ticker_major_holders(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -146,9 +140,9 @@ async def get_ticker_earnings(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
-    
+
 
 @router.get("/get-ticker-earnings-history/{symbol}")
 async def get_ticker_earnings_history(symbol: str, user: CurrentUser):
@@ -163,9 +157,9 @@ async def get_ticker_earnings_history(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
-    
+
 
 @router.get("/get-ticker-earnings-estimate/{symbol}")
 async def get_ticker_earnings_estimates(symbol: str, user: CurrentUser):
@@ -182,7 +176,7 @@ async def get_ticker_earnings_estimates(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -201,8 +195,9 @@ async def get_ticker_revenue_estimates(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
+
 
 @router.get("/get-ticker-growth-estimates/{symbol}")
 async def get_ticker_growth_estimates(symbol: str, user: CurrentUser):
@@ -219,9 +214,9 @@ async def get_ticker_growth_estimates(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
-    
+
 
 @router.get("/get-ticker-dividends/{symbol}")
 async def get_ticker_dividends(symbol: str, user: CurrentUser):
@@ -238,7 +233,7 @@ async def get_ticker_dividends(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -257,9 +252,9 @@ async def get_ticker_splits(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
-    
+
 
 @router.get("/get-ticker-balance-sheet/{symbol}")
 async def get_balance_sheet(symbol: str, user: CurrentUser):
@@ -276,7 +271,7 @@ async def get_balance_sheet(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -295,7 +290,7 @@ async def get_cashflow(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -312,7 +307,7 @@ async def get_financials(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
@@ -329,9 +324,9 @@ async def get_sustainability(symbol: str):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
-    
+
 
 @router.get("/get-ticker-calendar/{symbol}")
 async def get_calendar(symbol: str, user: CurrentUser):
@@ -346,9 +341,9 @@ async def get_calendar(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
-    
+
 
 @router.get("/get-ticker-analyst-price-targets/{symbol}")
 async def get_analyst_price_targets(symbol: str, user: CurrentUser):
@@ -363,9 +358,8 @@ async def get_analyst_price_targets(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
-
 
 
 ### Ticker Lookup and Search Endpoints
@@ -373,7 +367,9 @@ async def get_analyst_price_targets(symbol: str, user: CurrentUser):
 
 @router.get("/lookup/{query}")
 async def lookup_tickers(
-    query: str, user: CurrentUser, count: int = Query(10, description="Number of results to return"),
+    query: str,
+    user: CurrentUser,
+    count: int = Query(10, description="Number of results to return"),
 ):
     try:
         # Create Lookup object
@@ -396,8 +392,7 @@ async def lookup_tickers(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
 
@@ -434,8 +429,7 @@ async def search_tickers(query: str, user: CurrentUser):
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
 
@@ -453,11 +447,12 @@ async def get_ticker_news(symbol: str, user: CurrentUser):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
 ### Analyst Recommendation Data Endpoints
+
 
 @router.get("/get-ticker-analyst-recommendations/{symbol}")
 async def get_analyst_recommendations(symbol: str, user: CurrentUser):
@@ -466,17 +461,21 @@ async def get_analyst_recommendations(symbol: str, user: CurrentUser):
         recs = ticker.recommendations
         if recs is None or recs.empty:
             return {"symbol": symbol, "recommendations": []}
-        return {"symbol": symbol, "recommendations": recs.reset_index().to_dict(orient="records")}
+        return {
+            "symbol": symbol,
+            "recommendations": recs.reset_index().to_dict(orient="records"),
+        }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
 
 
 ### Analyst Recommendation Summary Endpoint
+
 
 @router.get("yf/get-ticker-analyst-recommendations-summary/{symbol}")
 async def get_analyst_recommendations_summary(symbol: str, user: CurrentUser):
@@ -485,19 +484,26 @@ async def get_analyst_recommendations_summary(symbol: str, user: CurrentUser):
         ars = ticker.recommendations_summary
         if ars is None or ars.empty:
             return {"symbol": symbol, "recommendations_summary": []}
-        return {"symbol": symbol, "recommendations_summary": ars.reset_index().to_dict(orient="records")}
+        return {
+            "symbol": symbol,
+            "recommendations_summary": ars.reset_index().to_dict(orient="records"),
+        }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
+
 
 ### Stock History Data Endpoints
 
 
-@router.get("/get-ticker-history/{symbol}", description="Get historical market data for a given ticker symbol. Either start/end or period must be provided followed by interval.")
+@router.get(
+    "/get-ticker-history/{symbol}",
+    description="Get historical market data for a given ticker symbol. Either start/end or period must be provided followed by interval.",
+)
 async def get_ticker_history(
     symbol: str,
     user: CurrentUser,
@@ -552,5 +558,5 @@ async def get_ticker_history(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}"
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
         )
