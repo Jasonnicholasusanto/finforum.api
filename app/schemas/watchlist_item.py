@@ -19,6 +19,12 @@ class WatchlistItemCreate(WatchlistItemBase):
     watchlist_id: int
 
 
+class WatchlistItemCreateWithoutId(WatchlistItemBase):
+    """Used when watchlist_id is not known yet."""
+
+    pass
+
+
 class WatchlistItemUpdate(SQLModel):
     symbol: Optional[str] = Field(default=None, min_length=1)
     exchange: Optional[str] = Field(default=None, min_length=1)

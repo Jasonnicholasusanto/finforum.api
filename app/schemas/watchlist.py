@@ -31,10 +31,19 @@ class WatchlistCreate(WatchlistBase):
 
 
 class WatchlistUpdate(SQLModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=500)
-    visibility: Optional[WatchlistVisibility] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
     is_default: Optional[bool] = None
+    visibility: Optional[WatchlistVisibility] = None
+
+
+class WatchlistPublicOut(WatchlistBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: UUID
+    created_at: datetime
+    updated_at: datetime
 
 
 class WatchlistOut(WatchlistBase):

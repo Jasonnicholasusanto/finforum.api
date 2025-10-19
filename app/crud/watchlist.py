@@ -5,6 +5,7 @@ import uuid
 from typing import List, Optional
 
 from sqlalchemy import func, update as sa_update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.crud.base import CRUDBase
@@ -121,36 +122,50 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
 
     # ----- CREATE / UPDATE / DELETE -----
     def create(
-        self, session: Session, *, owner_id: uuid.UUID, obj_in: WatchlistCreate
+        self,
+        session: Session,
+        *,
+        owner_id: uuid.UUID,
+        obj_in: WatchlistCreate,
     ) -> Watchlist:
         """
-        Create a watchlist for the owner. If obj_in.is_default=True,
-        unset other defaults for this user within the same transaction.
+        Create a watchlist for the owner.
+        If obj_in.is_default=True, unset other defaults for this user first.
+        Then call the base create() for actual insertion.
         """
-        if obj_in.is_default:
-            session.exec(
-                sa_update(Watchlist)
-                .where(Watchlist.user_id == owner_id)
-                .values(is_default=False)
-            )
+        try:
+            # 1. Unset other defaults (within same transaction)
+            if obj_in.is_default:
+                session.exec(
+                    sa_update(Watchlist)
+                    .where(Watchlist.user_id == owner_id)
+                    .values(is_default=False)
+                )
 
-        db_obj = Watchlist(**obj_in.model_dump(exclude_unset=True))
-        db_obj.user_id = owner_id
-        session.add(db_obj)
-        session.flush()  # populate db_obj.id
-        return db_obj
+            # 2. Create the new watchlist
+            db_obj = super().create(session, obj_in=obj_in, user_id=owner_id)
+
+            return db_obj
+
+        except IntegrityError as e:
+            session.rollback()
+            # Handle unique constraint violations (e.g., duplicate name per user)
+            if "ux_watchlist_user_name" in str(e.orig):
+                raise ValueError("You already have a watchlist with this name.")
+            raise ValueError(f"Failed to create watchlist: {str(e)}")
 
     def update(
         self, session: Session, *, id: int, obj_in: WatchlistUpdate
-    ) -> Watchlist | None:
+    ) -> Optional[Watchlist]:
         """
-        Update fields by id. If setting is_default=True, unset other defaults
-        for the same user first.
+        Update fields by id.
+        If setting is_default=True, unset other defaults for the same user first.
         """
         db_obj = session.get(Watchlist, id)
         if not db_obj:
             return None
 
+        # If user sets is_default=True, make sure to unset others
         if obj_in.is_default is True:
             session.exec(
                 sa_update(Watchlist)
@@ -161,18 +176,24 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
                 .values(is_default=False)
             )
 
-        # delegate to base for partial update semantics
+        # Delegate to CRUDBase for patch semantics and commit
         return super().update(session, id=id, obj_in=obj_in)
 
-    def delete(self, session: Session, *, id: int) -> bool:
-        """Delete by id. Returns True if deleted, False if not found."""
-        obj = session.get(Watchlist, id)
-        if not obj:
-            return False
-        session.delete(obj)
-        # NOTE: if you guarantee at most one default per user, consider
-        # auto-promoting another watchlist to default here if you delete the default.
-        return True
+    def remove(
+        self,
+        session: Session,
+        *,
+        id: int,
+    ) -> Optional[Watchlist]:
+        """
+        Delete a watchlist by ID.
+        Returns the deleted watchlist or None if not found.
+        """
+        db_obj = self.get(session, id=id)
+        if not db_obj:
+            return None
+
+        return super().remove(session, id=id)
 
 
 watchlist = CRUDWatchlist(Watchlist)
