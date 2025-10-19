@@ -10,7 +10,7 @@ from app.models.watchlist import Watchlist
 from app.models.watchlist_item import WatchlistItem
 from app.models.watchlist_share import WatchlistShare
 from app.schemas.watchlist import WatchlistCreate, WatchlistOut, WatchlistUpdate
-from app.schemas.watchlist_item import WatchlistItemCreate, WatchlistItemCreateWithoutId
+from app.schemas.watchlist_item import WatchlistItemCreate, WatchlistItemCreateWithoutId, WatchlistItemUpdate
 from app.schemas.watchlist_share import WatchlistShareCreate
 
 
@@ -186,6 +186,60 @@ def add_many_items_to_watchlist(
         session.refresh(db_item)
 
     return db_items
+
+
+def update_watchlist_item(
+    session,
+    *,
+    item_id: int,
+    user_profile_id: uuid.UUID,
+    update_data: WatchlistItemUpdate,
+):
+    """
+    Update a watchlist item.
+    User must either own the watchlist or have edit access to it.
+    """
+    db_item = session.get(WatchlistItem, item_id)
+    if not db_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Watchlist item not found.",
+        )
+
+    # Check if user can edit this watchlist
+    can_edit = user_can_edit_watchlist(
+        session=session,
+        watchlist_id=db_item.watchlist_id,
+        user_id=user_profile_id,
+    )
+
+    if not can_edit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to edit this watchlist item.",
+        )
+
+    try:
+        updated_item = watchlist_item_crud.update(
+            session=session,
+            id=item_id,
+            obj_in=update_data,
+        )
+
+        if not updated_item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Failed to update item.",
+            )
+
+        return updated_item
+
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update watchlist item: {str(e)}",
+        )
 
 
 def delete_watchlist_item(
@@ -398,3 +452,5 @@ def update_user_watchlist(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update watchlist: {str(e)}",
         )
+
+

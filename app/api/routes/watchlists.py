@@ -13,6 +13,7 @@ from app.schemas.watchlist_item import (
     WatchlistItemBase,
     WatchlistItemCreate,
     WatchlistItemCreateWithoutId,
+    WatchlistItemUpdate,
 )
 from app.schemas.watchlist_share import (
     WatchlistShareCreate,
@@ -30,6 +31,7 @@ from app.services.watchlist_service import (
     search_public_watchlists_by_name,
     share_watchlist_with_user,
     update_user_watchlist,
+    update_watchlist_item,
     update_watchlist_share_permission,
     user_can_edit_watchlist,
     watchlist_item_exists,
@@ -377,3 +379,33 @@ def update_watchlist(
     )
 
     return updated_watchlist
+
+
+@router.patch("/items/{item_id}", response_model=WatchlistItemBase)
+def update_watchlist_item_route(
+    item_id: int,
+    update_data: WatchlistItemUpdate,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Update an existing item in a watchlist.
+    User must own or have edit access to the watchlist.
+    """
+    # 1. Get user profile (not auth user)
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found.",
+        )
+
+    # 2. Update item via service
+    updated_item = update_watchlist_item(
+        session=db,
+        item_id=item_id,
+        user_profile_id=profile.id,
+        update_data=update_data,
+    )
+
+    return updated_item

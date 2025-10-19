@@ -64,6 +64,19 @@ class CRUDWatchlistItem(
             session.refresh(db_item)
 
         return db_items
+    
+    def update(
+        self, session: Session, *, id: int, obj_in: WatchlistItemUpdate
+    ) -> Optional[WatchlistItem]:
+        """
+        Update an existing WatchlistItem.
+        """
+        db_obj = session.get(WatchlistItem, id)
+        if not db_obj:
+            return None
+
+        # Delegate to CRUDBase for patch-style updates
+        return super().update(session, id=id, obj_in=obj_in)
 
     def remove(
         self,
