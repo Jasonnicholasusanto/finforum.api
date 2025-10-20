@@ -50,7 +50,6 @@ class Watchlist(SQLModel, table=True):
         )
     )
 
-    # Timestamps (server-side defaults match your DDL)
     created_at: datetime = Field(
         sa_column=Column(
             postgresql.TIMESTAMP(timezone=True),

@@ -16,12 +16,13 @@ def get_navbar_routes(session: Session) -> NavbarRoutes:
 
     # 2. Convert SQLModel rows to Pydantic schema objects
     route_list = [
-        NavbarRouteBase.model_validate(r, from_attributes=True)
-        for r in routes
+        NavbarRouteBase.model_validate(r, from_attributes=True) for r in routes
     ]
 
     # 3. Build lookup map (id to route)
-    schema_map = {r.id: schema for r, schema in zip(routes, route_list) if hasattr(r, "id")}
+    schema_map = {
+        r.id: schema for r, schema in zip(routes, route_list) if hasattr(r, "id")
+    }
 
     # 4. Build nested tree
     root_routes = []
@@ -38,4 +39,3 @@ def get_navbar_routes(session: Session) -> NavbarRoutes:
 
     # 5. Return structured response
     return NavbarRoutes(navbar_routes=root_routes)
-

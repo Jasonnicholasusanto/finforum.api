@@ -9,12 +9,13 @@ from app.utils.global_variables import SECTOR_INDUSTRY_MAP
 
 router = APIRouter(prefix="/industry", tags=["industry"])
 
+
 @router.get("/list")
 async def get_sector_industry_list(user: CurrentUser):
     """
     Retrieve a list of market sectors.
     """
-    return {'sector_industry_map': SECTOR_INDUSTRY_MAP}
+    return {"sector_industry_map": SECTOR_INDUSTRY_MAP}
 
 
 @router.get("/info/{industry}")
@@ -24,7 +25,7 @@ async def get_industry_info(industry: str, user: CurrentUser):
     """
 
     industry = industry.lower()
-    
+
     try:
         sector_data = yf.Industry(industry)
         response_data = {
@@ -41,26 +42,31 @@ async def get_industry_info(industry: str, user: CurrentUser):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-    
+
+
 @router.get("/top-companies/{industry}")
 async def get_industry_top_companies(industry: str, user: CurrentUser, limit: int = 25):
     """
     Retrieve top companies in a given industry.
     """
     industry = industry.lower()
-    
+
     try:
         industry_data = yf.Industry(industry)
         top_companies = industry_data.top_companies[:limit]
         top_growth_companies = industry_data.top_growth_companies[:limit]
         top_performing_companies = industry_data.top_performing_companies[:limit]
-        
+
         response_data = {
             "industry": industry_data.name,
             "symbol": industry_data.symbol,
             "top_companies": top_companies.reset_index().to_dict(orient="records"),
-            "top_growth_companies": top_growth_companies.reset_index().to_dict(orient="records"),
-            "top_performing_companies": top_performing_companies.reset_index().to_dict(orient="records"),
+            "top_growth_companies": top_growth_companies.reset_index().to_dict(
+                orient="records"
+            ),
+            "top_performing_companies": top_performing_companies.reset_index().to_dict(
+                orient="records"
+            ),
         }
 
         response_data = json.loads(json.dumps(response_data, default=str))

@@ -49,8 +49,6 @@ class UserProfileUpdate(SQLModel):
     full_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     display_name: Optional[str] = None
     bio: Optional[str] = None
-    profile_picture: Optional[str] = None
-    background_picture: Optional[str] = None
     phone_number: Optional[str] = Field(default=None, max_length=50)
     email_address: Optional[str] = Field(default=None, max_length=255)
     is_active: Optional[bool] = None

@@ -60,7 +60,7 @@ async def get_market_info(market_indicator: str, user: CurrentUser):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-    
+
 
 @router.get("/yf/status/{market_indicator}")
 async def get_market_status(market_indicator: str, user: CurrentUser):
@@ -82,7 +82,7 @@ async def get_market_status(market_indicator: str, user: CurrentUser):
 
     try:
         market_obj = yf.Market(market_indicator)
-        market_status = market_obj.status 
+        market_status = market_obj.status
         serializable_status = safe_json(market_status)
 
         return {

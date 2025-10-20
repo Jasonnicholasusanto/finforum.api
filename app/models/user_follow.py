@@ -13,6 +13,7 @@ class UserFollow(SQLModel, table=True):
     Primary key is id (int, autoincrement).
     follower_id and following_id are FKs to public.user_profile.id
     """
+
     __tablename__ = "user_follow"
     __table_args__ = {"schema": "public"}
 
@@ -20,4 +21,3 @@ class UserFollow(SQLModel, table=True):
     follower_id: uuid.UUID = Field(foreign_key="public.user_profile.id", index=True)
     following_id: uuid.UUID = Field(foreign_key="public.user_profile.id", index=True)
     created_at: datetime = Field(default_factory=utcnow)
-

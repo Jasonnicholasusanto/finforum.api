@@ -12,7 +12,8 @@ class NavbarRouteBase(BaseModel):
     order_index: int | None = None
     is_active: bool = True
     is_visible: bool = True
-    children: Optional[List[NavbarRouteBase]] = None 
+    children: Optional[List[NavbarRouteBase]] = None
+
 
 class NavbarRoutes(BaseModel):
     navbar_routes: List[NavbarRouteBase] = Field(default_factory=list)

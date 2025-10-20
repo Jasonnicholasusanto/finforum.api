@@ -11,7 +11,12 @@ from app.schemas.user_profile import (
     UserProfilesPublic,
 )
 from app.services.user_activity_service import get_user_points
-from app.services.user_follow_service import get_followers, get_followers_count, get_following, get_following_count
+from app.services.user_follow_service import (
+    get_followers,
+    get_followers_count,
+    get_following,
+    get_following_count,
+)
 from app.services.user_profile_service import (
     _username_exists,
     get_user_profile_by_username,
@@ -102,8 +107,9 @@ def check_username(username: str, db: SessionDep = None):
 
 
 @router.get("/{user_id}/followers", response_model=PaginatedFollowersResponse)
-def list_followers(user_id: UUID, db: SessionDep = None, limit: int = 20,
-    offset: int = 0):
+def list_followers(
+    user_id: UUID, db: SessionDep = None, limit: int = 20, offset: int = 0
+):
     """
     Returns list of users who follow the given user.
     """
@@ -114,13 +120,16 @@ def list_followers(user_id: UUID, db: SessionDep = None, limit: int = 20,
         total=total,
         limit=limit,
         offset=offset,
-        data=[UserProfilePublic.model_validate(u, from_attributes=True) for u in followers],
+        data=[
+            UserProfilePublic.model_validate(u, from_attributes=True) for u in followers
+        ],
     )
 
 
 @router.get("/{user_id}/following", response_model=PaginatedFollowersResponse)
-def list_following(user_id: UUID, db: SessionDep = None, limit: int = 20,
-    offset: int = 0):
+def list_following(
+    user_id: UUID, db: SessionDep = None, limit: int = 20, offset: int = 0
+):
     """
     Returns list of users the given user is following.
     """
@@ -130,5 +139,7 @@ def list_following(user_id: UUID, db: SessionDep = None, limit: int = 20,
         total=total,
         limit=limit,
         offset=offset,
-        data=[UserProfilePublic.model_validate(u, from_attributes=True) for u in following],
+        data=[
+            UserProfilePublic.model_validate(u, from_attributes=True) for u in following
+        ],
     )

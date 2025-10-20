@@ -6,6 +6,7 @@ from app.services.navbar_routes_service import get_navbar_routes
 
 router = APIRouter(prefix="/navbar", tags=["navbar"])
 
+
 @router.get("/items", response_model=NavbarRoutes)
 async def get_navbar_items(db: SessionDep, user: CurrentUser):
     """
