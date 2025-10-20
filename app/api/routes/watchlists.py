@@ -24,12 +24,16 @@ from app.services.user_profile_service import get_user_profile_by_auth
 from app.services.watchlist_service import (
     add_item_to_watchlist,
     add_many_items_to_watchlist,
+    bookmark_watchlist,
     create_watchlist_for_user,
     delete_watchlist,
     delete_watchlist_item,
+    get_all_user_related_watchlists,
+    get_user_bookmarked_watchlists,
     load_items_for_watchlists,
     search_public_watchlists_by_name,
     share_watchlist_with_user,
+    unbookmark_watchlist,
     update_user_watchlist,
     update_watchlist_item,
     update_watchlist_share_permission,
@@ -39,6 +43,43 @@ from app.services.watchlist_service import (
 
 
 router = APIRouter(prefix="/watchlists", tags=["watchlists"])
+
+
+@router.get("/me")
+def get_my_watchlists(
+    user: CurrentUser,
+    db: SessionDep,
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    include_items: bool = Query(False, description="Include items for each watchlist"),
+):
+    """
+    Get the current user's watchlists (paginated).
+    Optional lazy loading with `limit` and `offset`.
+    """
+    # 1. Get user profile
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found.",
+        )
+
+    # 2. Fetch user's watchlists (paginated)
+    user_watchlists = get_all_user_related_watchlists(
+        session=db,
+        user_profile_id=profile.id,
+        limit=limit,
+        offset=offset,
+    )
+
+    # 3. Return results
+    return {
+        "count": len(user_watchlists),
+        "limit": limit,
+        "offset": offset,
+        "results": user_watchlists,
+    }
 
 
 # Public: Search public watchlists by name (case-insensitive, partial match)
@@ -409,3 +450,67 @@ def update_watchlist_item_route(
     )
 
     return updated_item
+
+
+@router.post("/{watchlist_id}/bookmark", status_code=status.HTTP_201_CREATED)
+def bookmark_watchlist_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Bookmark a public watchlist.
+    """
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    bookmark = bookmark_watchlist(
+        session=db,
+        watchlist_id=watchlist_id,
+        user_profile_id=profile.id,
+    )
+    return {"message": "Watchlist bookmarked successfully.", "bookmark": bookmark}
+
+
+@router.delete("/{watchlist_id}/bookmark", status_code=status.HTTP_200_OK)
+def unbookmark_watchlist_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Remove a bookmark for a public watchlist.
+    """
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    return unbookmark_watchlist(
+        session=db,
+        watchlist_id=watchlist_id,
+        user_profile_id=profile.id,
+    )
+
+
+@router.get("/bookmarks/me", status_code=status.HTTP_200_OK)
+def list_user_bookmarks_route(
+    user: CurrentUser,
+    db: SessionDep,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """
+    List all watchlists bookmarked by the current user.
+    """
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    results = get_user_bookmarked_watchlists(
+        session=db,
+        user_profile_id=profile.id,
+        limit=limit,
+        offset=offset,
+    )
+    return {"count": len(results), "results": results}

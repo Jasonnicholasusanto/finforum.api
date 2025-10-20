@@ -6,10 +6,13 @@ from sqlmodel import Session, select
 from app.crud.watchlist_item import watchlist_item as watchlist_item_crud
 from app.crud.watchlist import watchlist as watchlist_crud
 from app.crud.watchlist_share import watchlist_share as watchlist_share_crud
+from app.crud.watchlist_bookmark import watchlist_bookmark as watchlist_bookmark_crud
 from app.models.watchlist import Watchlist
+from app.models.watchlist_bookmark import WatchlistBookmark
 from app.models.watchlist_item import WatchlistItem
 from app.models.watchlist_share import WatchlistShare
 from app.schemas.watchlist import WatchlistCreate, WatchlistOut, WatchlistUpdate
+from app.schemas.watchlist_bookmark import WatchlistBookmarkBase
 from app.schemas.watchlist_item import WatchlistItemCreate, WatchlistItemCreateWithoutId, WatchlistItemUpdate
 from app.schemas.watchlist_share import WatchlistShareCreate
 
@@ -20,6 +23,77 @@ def search_public_watchlists_by_name(
     return watchlist_crud.list_public_by_name(
         session, name=name, limit=limit, offset=offset
     )
+
+
+def get_all_user_related_watchlists(
+    session,
+    *,
+    user_profile_id: uuid.UUID,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    """
+    Fetch all watchlists associated with a user, including:
+      1. Watchlists the user owns,
+      2. Watchlists shared with the user,
+      3. Watchlists the user bookmarked.
+
+    Returns a categorized dictionary for clarity.
+    """
+
+    # 1. Watchlists the user OWNS
+    owned_stmt = (
+        select(Watchlist)
+        .where(Watchlist.user_id == user_profile_id)
+        .order_by(Watchlist.created_at.desc())
+    )
+    owned_watchlists = list(session.exec(owned_stmt).all())
+
+    # 2. Watchlists SHARED with the user
+    shared_stmt = (
+        select(Watchlist)
+        .join(WatchlistShare, WatchlistShare.watchlist_id == Watchlist.id)
+        .where(WatchlistShare.user_id == user_profile_id)
+        .order_by(Watchlist.created_at.desc())
+    )
+    shared_watchlists = list(session.exec(shared_stmt).all())
+
+    # 3. Watchlists BOOKMARKED by the user
+    bookmarked_stmt = (
+        select(Watchlist)
+        .join(WatchlistBookmark, WatchlistBookmark.watchlist_id == Watchlist.id)
+        .where(WatchlistBookmark.user_id == user_profile_id)
+        .order_by(Watchlist.created_at.desc())
+    )
+    bookmarked_watchlists = list(session.exec(bookmarked_stmt).all())
+
+    # Optionally apply limit/offset across the combined list
+    # (if you want pagination per category, apply separately)
+    if limit:
+        owned_watchlists = owned_watchlists[offset:offset + limit]
+        shared_watchlists = shared_watchlists[offset:offset + limit]
+        bookmarked_watchlists = bookmarked_watchlists[offset:offset + limit]
+
+    # 4. Build Response
+    return {
+        "owned": [
+            WatchlistOut.model_validate(w, from_attributes=True)
+            for w in owned_watchlists
+        ],
+        "shared": [
+            WatchlistOut.model_validate(w, from_attributes=True)
+            for w in shared_watchlists
+        ],
+        "bookmarked": [
+            WatchlistOut.model_validate(w, from_attributes=True)
+            for w in bookmarked_watchlists
+        ],
+        "counts": {
+            "owned": len(owned_watchlists),
+            "shared": len(shared_watchlists),
+            "bookmarked": len(bookmarked_watchlists),
+        },
+    }
 
 
 def watchlist_item_exists(
@@ -453,4 +527,139 @@ def update_user_watchlist(
             detail=f"Failed to update watchlist: {str(e)}",
         )
 
+
+def check_watchlist_bookmarked(
+    session, *, watchlist_id: int, user_profile_id: uuid.UUID
+) -> bool:
+    """
+    Check if the given watchlist is bookmarked by the user.
+    """
+    bookmark = session.exec(
+        select(WatchlistBookmark)
+        .where(
+            (WatchlistBookmark.watchlist_id == watchlist_id)
+            & (WatchlistBookmark.user_id == user_profile_id)
+        )
+    ).first()
+    if bookmark:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Watchlist is already bookmarked.",
+        ) 
+    
+
+def check_watchlist_exists(
+    session, *, watchlist_id: int, is_public: bool = True
+) -> Watchlist:
+    """
+    Check if the given watchlist exists and is public.
+    """
+    watchlist = watchlist_crud.get(session, id=watchlist_id)
+    if not watchlist or (is_public and watchlist.visibility != "public"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Watchlist not found or is not public.",
+        )
+    return watchlist
+
+
+def bookmark_watchlist(session, *, watchlist_id: int, user_profile_id: uuid.UUID):
+    """
+    Bookmark a public watchlist.
+    """
+    try:
+        # 1. Validate watchlist exists and is public
+        watchlist = check_watchlist_exists(
+            session=session,
+            watchlist_id=watchlist_id,
+            is_public=True,
+        )
+        
+        # 2. Check if already bookmarked
+        check_watchlist_bookmarked(
+            session=session,
+            watchlist_id=watchlist.id,
+            user_profile_id=user_profile_id,
+        )
+        
+        # 3. Create bookmark
+        obj_in = WatchlistBookmarkBase(
+            watchlist_id=watchlist.id,
+            user_id=user_profile_id,
+        )
+        bookmark = watchlist_bookmark_crud.create(
+            session=session,
+            obj_in=obj_in,
+        )
+        return bookmark
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to bookmark watchlist: {str(e)}",
+        )
+
+
+def unbookmark_watchlist(session, *, watchlist_id: int, user_profile_id: uuid.UUID):
+    """
+    Remove a watchlist bookmark.
+    """
+    try:
+        # 1. Validate watchlist exists and is public
+        watchlist = check_watchlist_exists(
+            session=session,
+            watchlist_id=watchlist_id,
+            is_public=True,
+        )
+
+        # 2. Get watchlist bookmark
+        bookmark = watchlist_bookmark_crud.get_watchlist_bookmark(
+            session=session,
+            watchlist_id=watchlist.id,
+            user_id=user_profile_id,
+        )
+        if not bookmark:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Watchlist Bookmark not found.",
+            )
+        
+        # 3. Remove bookmark
+        watchlist_bookmark_crud.remove(
+            session=session,
+            id=bookmark.id,
+        )
+        return {"message": "Bookmark removed successfully."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove bookmark: {str(e)}",
+        )
+
+
+def get_user_bookmarked_watchlists(
+    session, *, user_profile_id: uuid.UUID, limit: int = 10, offset: int = 0
+):
+    """
+    Return watchlists bookmarked by the user (with pagination).
+    """
+    bookmarks = watchlist_bookmark_crud.list_user_bookmarks(
+        session=session,
+        user_id=user_profile_id,
+        limit=limit,
+        offset=offset,
+    )
+
+    if not bookmarks:
+        return []
+
+    watchlist_ids = [b.watchlist_id for b in bookmarks]
+
+    stmt = select(Watchlist).where(Watchlist.id.in_(watchlist_ids))
+    return list(session.exec(stmt).all())
 

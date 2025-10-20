@@ -24,6 +24,12 @@ def register_models():
             user_profile as _user_profile,
             user_activity as _user_activity,
             user_follow as _user_follow,
+            navbar_routes as _navbar_routes,
+            point_rule as _point_rule,
+            watchlist as _watchlist,
+            watchlist_bookmark as _watchlist_bookmark,
+            watchlist_item as _watchlist_item,
+            watchlist_share as _watchlist_share,
         )
 
         logger.info("Models registered to SQLModel metadata.")
