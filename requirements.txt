@@ -25,6 +25,7 @@ packaging==25.0
 pandas==2.3.2
 peewee==3.18.2
 platformdirs==4.4.0
+python-multipart==0.0.20
 postgrest==1.1.1
 protobuf==6.32.1
 psycopg2-binary==2.9.10

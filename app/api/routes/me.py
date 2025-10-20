@@ -2,7 +2,6 @@ from uuid import UUID
 import uuid
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
-# from supabase import create_async_client
 from sqlalchemy.exc import IntegrityError
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.user_activity import UserActivityCreate, UserActivityPublic
