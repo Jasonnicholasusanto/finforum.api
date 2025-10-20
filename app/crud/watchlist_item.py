@@ -64,7 +64,7 @@ class CRUDWatchlistItem(
             session.refresh(db_item)
 
         return db_items
-    
+
     def update(
         self, session: Session, *, id: int, obj_in: WatchlistItemUpdate
     ) -> Optional[WatchlistItem]:

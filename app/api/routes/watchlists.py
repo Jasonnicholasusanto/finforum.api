@@ -30,6 +30,7 @@ from app.services.watchlist_service import (
     delete_watchlist_item,
     get_all_user_related_watchlists,
     get_user_bookmarked_watchlists,
+    get_watchlists_shared_with_user,
     load_items_for_watchlists,
     search_public_watchlists_by_name,
     share_watchlist_with_user,
@@ -49,9 +50,8 @@ router = APIRouter(prefix="/watchlists", tags=["watchlists"])
 def get_my_watchlists(
     user: CurrentUser,
     db: SessionDep,
-    limit: int = Query(10, ge=1, le=50),
+    limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0),
-    include_items: bool = Query(False, description="Include items for each watchlist"),
 ):
     """
     Get the current user's watchlists (paginated).
@@ -86,9 +86,9 @@ def get_my_watchlists(
 @router.get("/@{name}", response_model=WatchlistsDetail)
 def get_watchlists_by_name(
     name: str,
-    user: CurrentUser,  # keep if your API requires auth; otherwise remove
+    user: CurrentUser,
     db: SessionDep,
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50),
     offset: int = Query(0, ge=0),
 ):
     """
@@ -325,6 +325,40 @@ def delete_watchlist_route(
     return {
         "message": "Watchlist deleted successfully.",
         "deleted_watchlist": deleted_watchlist,
+    }
+
+
+@router.get("/shared/me", response_model=dict)
+def get_shared_watchlists_for_user(
+    user: CurrentUser,
+    db: SessionDep,
+    limit: int = Query(10, ge=1, le=20),
+    offset: int = Query(0, ge=0),
+):
+    """
+    Get all watchlists that have been shared with the current user.
+    Includes edit permissions for each shared watchlist.
+    """
+    # 1. Get user profile (not auth user)
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found.",
+        )
+
+    # 2. Get shared watchlists
+    shared_watchlists = get_watchlists_shared_with_user(
+        session=db,
+        user_profile_id=profile.id,
+        limit=limit,
+        offset=offset,
+    )
+
+    return {
+        "message": "Fetched watchlists shared with user successfully.",
+        "count": len(shared_watchlists),
+        "watchlists": shared_watchlists,
     }
 
 

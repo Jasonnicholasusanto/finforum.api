@@ -12,13 +12,12 @@ class WatchlistBookmark(SQLModel, table=True):
     """
     Association table for users bookmarking watchlists.
     """
+
     __tablename__ = "watchlist_bookmark"
     __table_args__ = {"schema": "public"}
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    watchlist_id: int = Field(
-        foreign_key="public.watchlist.id", index=True
-    )
+    watchlist_id: int = Field(foreign_key="public.watchlist.id", index=True)
     user_id: UUID = Field(foreign_key="public.user_profile.id", index=True)
     created_at: datetime = Field(
         sa_column=Column(

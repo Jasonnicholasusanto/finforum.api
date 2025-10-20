@@ -13,7 +13,11 @@ from app.models.watchlist_item import WatchlistItem
 from app.models.watchlist_share import WatchlistShare
 from app.schemas.watchlist import WatchlistCreate, WatchlistOut, WatchlistUpdate
 from app.schemas.watchlist_bookmark import WatchlistBookmarkBase
-from app.schemas.watchlist_item import WatchlistItemCreate, WatchlistItemCreateWithoutId, WatchlistItemUpdate
+from app.schemas.watchlist_item import (
+    WatchlistItemCreate,
+    WatchlistItemCreateWithoutId,
+    WatchlistItemUpdate,
+)
 from app.schemas.watchlist_share import WatchlistShareCreate
 
 
@@ -67,12 +71,11 @@ def get_all_user_related_watchlists(
     )
     bookmarked_watchlists = list(session.exec(bookmarked_stmt).all())
 
-    # Optionally apply limit/offset across the combined list
-    # (if you want pagination per category, apply separately)
+    # Optionally apply limit/offset across the combined list (to-do)
     if limit:
-        owned_watchlists = owned_watchlists[offset:offset + limit]
-        shared_watchlists = shared_watchlists[offset:offset + limit]
-        bookmarked_watchlists = bookmarked_watchlists[offset:offset + limit]
+        owned_watchlists = owned_watchlists[offset : offset + limit]
+        shared_watchlists = shared_watchlists[offset : offset + limit]
+        bookmarked_watchlists = bookmarked_watchlists[offset : offset + limit]
 
     # 4. Build Response
     return {
@@ -94,6 +97,38 @@ def get_all_user_related_watchlists(
             "bookmarked": len(bookmarked_watchlists),
         },
     }
+
+
+def get_watchlists_shared_with_user(
+    session,
+    *,
+    user_profile_id: uuid.UUID,
+    limit: int = 20,
+    offset: int = 0,
+) -> List[WatchlistOut]:
+    """
+    Fetch all watchlists that have been shared with a specific user.
+    Includes whether the user has edit permissions.
+    """
+    stmt = (
+        select(Watchlist, WatchlistShare.can_edit)
+        .join(WatchlistShare, WatchlistShare.watchlist_id == Watchlist.id)
+        .where(WatchlistShare.user_id == user_profile_id)
+        .order_by(Watchlist.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    results = session.exec(stmt).all()
+
+    watchlists = []
+    for w, can_edit in results:
+        watchlist_out = WatchlistOut.model_validate(w, from_attributes=True)
+        watchlist_out_dict = watchlist_out.model_dump()
+        watchlist_out_dict["can_edit"] = can_edit
+        watchlists.append(watchlist_out_dict)
+
+    return watchlists
 
 
 def watchlist_item_exists(
@@ -535,8 +570,7 @@ def check_watchlist_bookmarked(
     Check if the given watchlist is bookmarked by the user.
     """
     bookmark = session.exec(
-        select(WatchlistBookmark)
-        .where(
+        select(WatchlistBookmark).where(
             (WatchlistBookmark.watchlist_id == watchlist_id)
             & (WatchlistBookmark.user_id == user_profile_id)
         )
@@ -545,8 +579,8 @@ def check_watchlist_bookmarked(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Watchlist is already bookmarked.",
-        ) 
-    
+        )
+
 
 def check_watchlist_exists(
     session, *, watchlist_id: int, is_public: bool = True
@@ -574,14 +608,14 @@ def bookmark_watchlist(session, *, watchlist_id: int, user_profile_id: uuid.UUID
             watchlist_id=watchlist_id,
             is_public=True,
         )
-        
+
         # 2. Check if already bookmarked
         check_watchlist_bookmarked(
             session=session,
             watchlist_id=watchlist.id,
             user_profile_id=user_profile_id,
         )
-        
+
         # 3. Create bookmark
         obj_in = WatchlistBookmarkBase(
             watchlist_id=watchlist.id,
@@ -625,7 +659,7 @@ def unbookmark_watchlist(session, *, watchlist_id: int, user_profile_id: uuid.UU
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Watchlist Bookmark not found.",
             )
-        
+
         # 3. Remove bookmark
         watchlist_bookmark_crud.remove(
             session=session,
@@ -662,4 +696,3 @@ def get_user_bookmarked_watchlists(
 
     stmt = select(Watchlist).where(Watchlist.id.in_(watchlist_ids))
     return list(session.exec(stmt).all())
-

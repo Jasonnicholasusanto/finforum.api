@@ -16,4 +16,15 @@ from .watchlist_bookmark import WatchlistBookmark
 from .watchlist_item import WatchlistItem
 from .watchlist_share import WatchlistShare
 
-__all__ = ["User", "UserProfile", "UserActivity", "UserFollow", "NavbarRoute", "PointRule", "Watchlist", "WatchlistBookmark", "WatchlistItem", "WatchlistShare"]
+__all__ = [
+    "User",
+    "UserProfile",
+    "UserActivity",
+    "UserFollow",
+    "NavbarRoute",
+    "PointRule",
+    "Watchlist",
+    "WatchlistBookmark",
+    "WatchlistItem",
+    "WatchlistShare",
+]

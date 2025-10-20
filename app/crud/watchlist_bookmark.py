@@ -6,7 +6,9 @@ from uuid import UUID
 from app.schemas.watchlist_bookmark import WatchlistBookmarkBase
 
 
-class CRUDWatchlistBookmark(CRUDBase[WatchlistBookmark, WatchlistBookmarkBase, WatchlistBookmarkBase]):
+class CRUDWatchlistBookmark(
+    CRUDBase[WatchlistBookmark, WatchlistBookmarkBase, WatchlistBookmarkBase]
+):
     def get_watchlist_bookmark(
         self, session: Session, *, watchlist_id: int, user_id: UUID
     ) -> WatchlistBookmark | None:
@@ -19,17 +21,15 @@ class CRUDWatchlistBookmark(CRUDBase[WatchlistBookmark, WatchlistBookmarkBase, W
             .limit(1)
         )
         return session.exec(stmt).first()
-    
+
     def create(
         self, session: Session, *, obj_in: WatchlistBookmarkBase
-    ) -> WatchlistBookmark:        
+    ) -> WatchlistBookmark:
         db_obj = super().create(session, obj_in=obj_in)
 
         return db_obj
 
-    def remove(
-        self, session: Session, *, id: int
-    ) -> bool:
+    def remove(self, session: Session, *, id: int) -> bool:
         return super().remove(session, id=id)
 
     def list_user_bookmarks(
