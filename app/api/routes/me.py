@@ -1,7 +1,8 @@
 from uuid import UUID
 import uuid
-from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Body, File, HTTPException, Response, UploadFile, status
 
+from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.user_activity import UserActivityCreate, UserActivityPublic
@@ -38,8 +39,7 @@ from app.utils.global_variables import (
     RESERVED,
     MAX_BANNER_IMAGE_FILE_SIZE_KB,
 )
-from app.core.config import settings
-from supabase import create_client, Client
+from app.core.db import supabase_client
 
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -240,6 +240,13 @@ def update_my_profile(
     Only fields provided in the request body will be updated.
     """
 
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found.",
+        )
+
     # Prevent reserved usernames
     if update.username and update.username.lower() in RESERVED:
         raise HTTPException(
@@ -256,7 +263,7 @@ def update_my_profile(
 
     # 3) Update via service
     try:
-        profile = update_user_profile(db, user_id=user.id, profile_update=update)
+        profile = update_user_profile(db, user_id=profile.id, profile_update=update)
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -265,11 +272,68 @@ def update_my_profile(
 
     if not profile:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server error updating profile",
         )
 
     return UserProfilePublic.model_validate(profile, from_attributes=True)
+
+
+@router.patch("/update-email", status_code=status.HTTP_200_OK)
+def update_user_email(
+    user: CurrentUser,
+    db: SessionDep,
+    new_email: EmailStr = Body(..., embed=True),
+):
+    """
+    Update the authenticated user's email address in both:
+      - public.user_profile (local DB)
+      - auth.users (Supabase Auth)
+    """
+
+    # 1. Get the current user's profile
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    # 2. Validate the new email
+    if profile.email_address.lower() == new_email.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="The new email address is the same as the current one.",
+        )
+
+    # 3. Update email in Supabase Auth
+    try:
+        res = supabase_client.auth.admin.update_user_by_id(
+            user.id,
+            {"email": new_email}
+        )
+        if not res.user:
+            raise Exception("No user returned from Supabase after update.")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update email in Supabase Auth: {str(e)}"
+        )
+
+    # 4. Update local DB (public.user_profile)
+    try:
+        profile.email_address = new_email
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update email in local database: {str(e)}"
+        )
+
+    return {
+        "message": "Email address updated successfully.",
+        "email": new_email,
+    }
 
 
 # Authenticated: Upload banner picture
@@ -283,9 +347,6 @@ async def upload_banner_image(
     Uploads a profile picture for the current user to Supabase Storage,
     updates the user_profile table with the public URL, and returns it.
     """
-    supabase: Client = create_client(
-        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
-    )
 
     # 1. Validate file type
     if not file.content_type.startswith("image/"):
@@ -315,7 +376,7 @@ async def upload_banner_image(
     file_path = f"{current_user.id}/{unique_filename}"
 
     # 5. Upload to Supabase Storage
-    supabase.storage.from_("banner-images").upload(
+    supabase_client.storage.from_("banner-images").upload(
         path=file_path,
         file=contents,
         file_options={"cache-control": "3600", "upsert": "false"},
@@ -327,10 +388,10 @@ async def upload_banner_image(
             current_user.background_picture, "banner-images"
         )
         if old_path and old_path.startswith(str(current_user.id)):
-            supabase.storage.from_("banner-images").remove([old_path])
+            supabase_client.storage.from_("banner-images").remove([old_path])
 
     # 7. Get public URL
-    public_url = supabase.storage.from_("banner-images").get_public_url(file_path)
+    public_url = supabase_client.storage.from_("banner-images").get_public_url(file_path)
 
     # 8. Update DB with new URL
     try:
@@ -355,9 +416,6 @@ async def delete_banner_image(
     Deletes all profile pictures of the current user from Supabase Storage,
     and sets `profile_picture` to NULL in the `user_profile` table.
     """
-    supabase: Client = create_client(
-        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
-    )
 
     # 1. Get current user's profile
     current_user = get_user_profile_by_auth(db, auth_id=user.id)
@@ -370,7 +428,7 @@ async def delete_banner_image(
 
     # 2. List all files in this user's folder inside "banner-images" bucket
     try:
-        list_res = supabase.storage.from_("banner-images").list(path=user_folder)
+        list_res = supabase_client.storage.from_("banner-images").list(path=user_folder)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -381,7 +439,7 @@ async def delete_banner_image(
     if list_res:
         file_paths = [f"{user_folder}/{item['name']}" for item in list_res]
         try:
-            supabase.storage.from_("banner-images").remove(file_paths)
+            supabase_client.storage.from_("banner-images").remove(file_paths)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -411,9 +469,6 @@ async def upload_profile_picture(
     Uploads a profile picture for the current user to Supabase Storage,
     updates the user_profile table with the public URL, and returns it.
     """
-    supabase: Client = create_client(
-        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
-    )
 
     # 1. Validate file type
     if not file.content_type.startswith("image/"):
@@ -443,7 +498,7 @@ async def upload_profile_picture(
     file_path = f"{current_user.id}/{unique_filename}"
 
     # 5. Upload to Supabase Storage
-    supabase.storage.from_("profile-pictures").upload(
+    supabase_client.storage.from_("profile-pictures").upload(
         path=file_path,
         file=contents,
         file_options={"cache-control": "3600", "upsert": "false"},
@@ -455,10 +510,10 @@ async def upload_profile_picture(
             current_user.profile_picture, "profile-pictures"
         )
         if old_path and old_path.startswith(str(current_user.id)):
-            supabase.storage.from_("profile-pictures").remove([old_path])
+            supabase_client.storage.from_("profile-pictures").remove([old_path])
 
     # 7. Get public URL
-    public_url = supabase.storage.from_("profile-pictures").get_public_url(file_path)
+    public_url = supabase_client.storage.from_("profile-pictures").get_public_url(file_path)
 
     # 8. Update DB with new URL
     try:
@@ -481,9 +536,6 @@ async def delete_profile_picture(
     Deletes all profile pictures of the current user from Supabase Storage,
     and sets `profile_picture` to NULL in the `user_profile` table.
     """
-    supabase: Client = create_client(
-        settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
-    )
 
     # 1. Get current user's profile
     current_user = get_user_profile_by_auth(db, auth_id=user.id)
@@ -496,7 +548,7 @@ async def delete_profile_picture(
 
     # 2. List all files in this user's folder inside "profile-pictures" bucket
     try:
-        list_res = supabase.storage.from_("profile-pictures").list(path=user_folder)
+        list_res = supabase_client.storage.from_("profile-pictures").list(path=user_folder)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -507,7 +559,7 @@ async def delete_profile_picture(
     if list_res:
         file_paths = [f"{user_folder}/{item['name']}" for item in list_res]
         try:
-            supabase.storage.from_("profile-pictures").remove(file_paths)
+            supabase_client.storage.from_("profile-pictures").remove(file_paths)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

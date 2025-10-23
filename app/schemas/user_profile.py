@@ -50,7 +50,6 @@ class UserProfileUpdate(SQLModel):
     display_name: Optional[str] = None
     bio: Optional[str] = None
     phone_number: Optional[str] = Field(default=None, max_length=50)
-    email_address: Optional[str] = Field(default=None, max_length=255)
     is_active: Optional[bool] = None
 
     @field_validator("username")
