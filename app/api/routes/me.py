@@ -1,8 +1,7 @@
 from uuid import UUID
 import uuid
-from fastapi import APIRouter, Body, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
-from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.user_activity import UserActivityCreate, UserActivityPublic
@@ -13,13 +12,16 @@ from app.schemas.user_profile import (
     UserProfileMe,
     UserProfilePublic,
     UserProfileUpdate,
+    UserProfileUpdateEmail,
 )
 from app.services.user_profile_service import (
+    _email_exists,
     _username_exists,
     create_user_profile,
     get_user_profile,
     get_user_profile_by_auth,
     update_user_background_picture,
+    update_user_email_address,
     update_user_profile,
     update_user_profile_picture,
 )
@@ -283,13 +285,20 @@ def update_my_profile(
 def update_user_email(
     user: CurrentUser,
     db: SessionDep,
-    new_email: EmailStr = Body(..., embed=True),
+    update: UserProfileUpdateEmail,
 ):
     """
     Update the authenticated user's email address in both:
       - public.user_profile (local DB)
       - auth.users (Supabase Auth)
     """
+    email_exists = _email_exists(session=db, email=update.email_address)
+    
+    if email_exists:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email address is already in use.",
+        )
 
     # 1. Get the current user's profile
     profile = get_user_profile_by_auth(db, auth_id=user.id)
@@ -297,7 +306,7 @@ def update_user_email(
         raise HTTPException(status_code=404, detail="User profile not found.")
 
     # 2. Validate the new email
-    if profile.email_address.lower() == new_email.lower():
+    if profile.email_address.lower() == update.email_address.lower():
         raise HTTPException(
             status_code=400,
             detail="The new email address is the same as the current one.",
@@ -307,7 +316,7 @@ def update_user_email(
     try:
         res = supabase_client.auth.admin.update_user_by_id(
             user.id,
-            {"email": new_email}
+            {"email": update.email_address},
         )
         if not res.user:
             raise Exception("No user returned from Supabase after update.")
@@ -317,14 +326,12 @@ def update_user_email(
             detail=f"Failed to update email in Supabase Auth: {str(e)}"
         )
 
-    # 4. Update local DB (public.user_profile)
+    # 4. Update DB (public.user_profile)
     try:
-        profile.email_address = new_email
-        db.add(profile)
-        db.commit()
-        db.refresh(profile)
+        profile = update_user_email_address(db, user_id=profile.id, email_update=update)
+    except HTTPException:
+        raise
     except Exception as e:
-        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update email in local database: {str(e)}"
@@ -332,7 +339,7 @@ def update_user_email(
 
     return {
         "message": "Email address updated successfully.",
-        "email": new_email,
+        "profile": profile,
     }
 
 

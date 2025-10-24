@@ -41,6 +41,11 @@ class UserProfileCreate(UserProfileBase):
         return v
 
 
+class UserProfileUpdateEmail(SQLModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    email_address: EmailStr = Field(max_length=255)
+
 # Properties to receive on item update
 class UserProfileUpdate(SQLModel):
     model_config = ConfigDict(from_attributes=True)

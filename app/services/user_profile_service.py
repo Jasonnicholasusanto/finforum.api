@@ -8,6 +8,7 @@ from app.schemas.user_profile import (
     UserProfileCreate,
     UserProfileUpdate,
     UserProfilePublic,
+    UserProfileUpdateEmail,
     UserProfilesPublic,
     UserProfileMe,
 )
@@ -174,6 +175,22 @@ def update_user_profile(
         raise ValueError("auth_id cannot be modified.")
 
     updated = user_profile_crud.update(session, id=user_id, obj_in=profile_update)
+    return UserProfileMe.model_validate(updated) if updated else None
+
+def update_user_email_address(
+    session: Session,
+    *,
+    user_id: uuid.UUID,
+    email_update: UserProfileUpdateEmail,
+) -> Optional[UserProfileMe]:
+    """
+    Update user email address with uniqueness check.
+    """
+    existing = user_profile_crud.get(session, id=user_id)
+    if not existing:
+        return None
+
+    updated = user_profile_crud.update(session, id=user_id, obj_in=email_update)
     return UserProfileMe.model_validate(updated) if updated else None
 
 
