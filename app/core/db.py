@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from sqlmodel import Session, create_engine
+from supabase import Client, create_client
 from app.core.config import settings
 
 
@@ -11,3 +12,9 @@ def get_db() -> Generator[Session, None]:
     # It opens a SQLAlchemy/SQLModel session to your Supabase database and automatically closes it after the request finishes.
     with Session(engine) as session:
         yield session
+
+
+supabase_client: Client = create_client(
+    settings.SUPABASE_URL,
+    settings.SUPABASE_SERVICE_KEY,
+)
