@@ -25,7 +25,6 @@ class Watchlist(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    # FK → public.user_profile.id (uuid)
     user_id: UUID = Field(foreign_key="public.user_profile.id", index=True)
 
     name: str = Field(index=False)
@@ -41,9 +40,9 @@ class Watchlist(SQLModel, table=True):
                 WatchlistVisibility,
                 name="watchlist_visibility",
                 schema="public",
-                create_type=False,  # reference existing DB type
-                values_callable=lambda e: [i.value for i in e],  # ← use values
-                validate_strings=True,  # catch bad strings early
+                create_type=False, 
+                values_callable=lambda e: [i.value for i in e],
+                validate_strings=True,
             ),
             nullable=False,
             server_default=text("'private'::watchlist_visibility"),

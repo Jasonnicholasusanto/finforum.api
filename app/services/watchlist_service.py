@@ -524,7 +524,7 @@ def update_user_watchlist(
     Update a user's watchlist.
     Only the owner of the watchlist may perform updates.
     """
-    # 1️⃣ Fetch existing watchlist
+    # 1. Fetch existing watchlist
     watchlist = watchlist_crud.get(session, id=watchlist_id)
     if not watchlist:
         raise HTTPException(
@@ -532,14 +532,14 @@ def update_user_watchlist(
             detail="Watchlist not found.",
         )
 
-    # 2️⃣ Verify ownership
+    # 2. Verify ownership
     if str(watchlist.user_id) != str(owner_profile_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to update this watchlist.",
         )
 
-    # 3️⃣ Apply updates via CRUD
+    # 3. Apply updates via CRUD
     try:
         updated_watchlist = watchlist_crud.update(
             session=session,
