@@ -1,8 +1,7 @@
 from typing import Optional
 from fastapi import HTTPException, status
-from pydantic import ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 import uuid
-from sqlmodel import SQLModel
 import re
 
 
@@ -10,7 +9,7 @@ USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.]*$")
 
 
 # Shared base properties
-class UserProfileBase(SQLModel):
+class UserProfileBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     username: str
@@ -41,13 +40,13 @@ class UserProfileCreate(UserProfileBase):
         return v
 
 
-class UserProfileUpdateEmail(SQLModel):
+class UserProfileUpdateEmail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     email_address: EmailStr = Field(max_length=255)
 
 # Properties to receive on item update
-class UserProfileUpdate(SQLModel):
+class UserProfileUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     username: Optional[str] = None
@@ -76,7 +75,7 @@ class UserProfileUpdate(SQLModel):
 
 
 # Properties to return to client
-class UserProfilePublic(SQLModel):
+class UserProfilePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -89,13 +88,13 @@ class UserProfilePublic(SQLModel):
     background_picture: Optional[str] = None
 
 
-class UserProfilesPublic(SQLModel):
+class UserProfilesPublic(BaseModel):
     data: list[UserProfilePublic]
     count: int
 
 
 # Private/me response (richer)
-class UserProfileMe(SQLModel):
+class UserProfileMe(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     auth_id: uuid.UUID

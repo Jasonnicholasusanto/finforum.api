@@ -4,8 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import ConfigDict
-from sqlmodel import SQLModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PointRuleSource(str, Enum):
@@ -26,7 +25,7 @@ class PointRuleSource(str, Enum):
 
 
 # ---------- Base (shared fields) ----------
-class PointRuleBase(SQLModel):
+class PointRuleBase(BaseModel):
     source: PointRuleSource
     # points can be positive or negative
     points: int = Field(..., description="Point delta; may be negative.")
@@ -38,7 +37,7 @@ class PointRuleCreate(PointRuleBase):
 
 
 # ---------- Update (partial) ----------
-class PointRuleUpdate(SQLModel):
+class PointRuleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source: Optional[PointRuleSource] = None
