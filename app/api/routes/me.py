@@ -257,11 +257,12 @@ def update_my_profile(
         )
 
     # 2b) Prevent duplicate username
-    exists = _username_exists(session=db, username=update.username)
-    if exists:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Username already taken"
-        )
+    if update.username and update.username != profile.username:
+        exists = _username_exists(session=db, username=update.username)
+        if exists:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Username already taken"
+            )
 
     # 3) Update via service
     try:
