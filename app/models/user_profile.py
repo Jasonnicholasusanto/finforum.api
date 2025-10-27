@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import uuid
 from typing import Optional
 from pydantic import EmailStr
@@ -31,6 +31,7 @@ class UserProfile(SQLModel, table=True):
     full_name: str = Field(min_length=1, max_length=255)
     display_name: Optional[str] = None
     bio: Optional[str] = None
+    birth_date: Optional[date] = None
     profile_picture: Optional[str] = None
     background_picture: Optional[str] = None
     is_active: bool = Field(default=True)

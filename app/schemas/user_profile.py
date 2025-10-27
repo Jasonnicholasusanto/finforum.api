@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 from fastapi import HTTPException, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -8,7 +9,6 @@ import re
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.]*$")
 
 
-# Shared base properties
 class UserProfileBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -16,13 +16,13 @@ class UserProfileBase(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     display_name: Optional[str] = None
     bio: Optional[str] = None
+    birth_date: Optional[date] = None
     profile_picture: Optional[str] = None
     background_picture: Optional[str] = None
     phone_number: Optional[str] = Field(default=None, max_length=50)
     email_address: EmailStr = Field(max_length=255)
 
 
-# Properties to receive on user creation
 class UserProfileCreate(UserProfileBase):
     @field_validator("username")
     @classmethod
@@ -53,6 +53,7 @@ class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     display_name: Optional[str] = None
     bio: Optional[str] = None
+    birth_date: Optional[date] = None
     phone_number: Optional[str] = Field(default=None, max_length=50)
     is_active: Optional[bool] = None
 
@@ -74,7 +75,6 @@ class UserProfileUpdate(BaseModel):
         return v
 
 
-# Properties to return to client
 class UserProfilePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -102,6 +102,7 @@ class UserProfileMe(BaseModel):
     full_name: str
     display_name: Optional[str] = None
     bio: Optional[str] = None
+    birth_date: Optional[date] = None
     profile_picture: Optional[str] = None
     background_picture: Optional[str] = None
     phone_number: Optional[str] = None

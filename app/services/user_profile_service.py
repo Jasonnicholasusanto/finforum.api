@@ -165,11 +165,6 @@ def update_user_profile(
     ):
         raise ValueError("Username is already taken.")
 
-    if profile_update.email_address and _email_exists(
-        session, str(profile_update.email_address), exclude_id=user_id
-    ):
-        raise ValueError("Email address is already in use.")
-
     # Explicitly guard against accidental auth_id changes if someone slips it into the payload
     if hasattr(profile_update, "auth_id"):
         raise ValueError("auth_id cannot be modified.")

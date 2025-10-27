@@ -231,7 +231,7 @@ def create_my_profile(
 
 
 # Authenticated: Update a logged in user's profile
-@router.patch("/profile", response_model=UserProfilePublic)
+@router.patch("/profile", response_model=UserProfileMe)
 def update_my_profile(
     update: UserProfileUpdate,
     user: CurrentUser,
@@ -279,7 +279,7 @@ def update_my_profile(
             detail="Server error updating profile",
         )
 
-    return UserProfilePublic.model_validate(profile, from_attributes=True)
+    return UserProfileMe.model_validate(profile, from_attributes=True)
 
 
 @router.patch("/update-email", status_code=status.HTTP_200_OK)
