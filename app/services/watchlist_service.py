@@ -11,7 +11,7 @@ from app.models.watchlist import Watchlist
 from app.models.watchlist_bookmark import WatchlistBookmark
 from app.models.watchlist_item import WatchlistItem
 from app.models.watchlist_share import WatchlistShare
-from app.schemas.watchlist import WatchlistCreate, WatchlistOut, WatchlistUpdate
+from app.schemas.watchlist import WatchlistCreate, WatchlistForkOut, WatchlistOut, WatchlistUpdate, WatchlistVisibility
 from app.schemas.watchlist_bookmark import WatchlistBookmarkBase
 from app.schemas.watchlist_item import (
     WatchlistItemCreate,
@@ -696,3 +696,74 @@ def get_user_bookmarked_watchlists(
 
     stmt = select(Watchlist).where(Watchlist.id.in_(watchlist_ids))
     return list(session.exec(stmt).all())
+
+
+def fork_watchlist(
+    session: Session,
+    *,
+    watchlist_id: int,
+    user_profile_id: uuid.UUID,
+) -> WatchlistForkOut:
+    """
+    Fork a public watchlist:
+      1. Validate existence & visibility
+      2. Prevent forking your own list
+      3. Clone the watchlist (CRUD layer)
+      4. Duplicate its items
+      5. Increment fork_count on the original
+    """
+    # 1. Get the source watchlist
+    source = watchlist_crud.get(session, id=watchlist_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Original watchlist not found.")
+    if source.visibility != WatchlistVisibility.PUBLIC.value:
+        raise HTTPException(
+            status_code=403, detail="Only public watchlists can be forked."
+        )
+
+    # 2. Prevent self-fork
+    if str(source.user_id) == str(user_profile_id):
+        raise HTTPException(
+            status_code=400, detail="You cannot fork your own watchlist."
+        )
+
+    # 3. Create forked watchlist (DB insert)
+    forked = watchlist_crud.fork(
+        session=session,
+        source_watchlist=source,
+        new_owner_id=user_profile_id,
+    )
+
+    # 4. Copy items from original to fork
+    items_map = load_items_for_watchlists(session, [source.id])
+    original_items = items_map.get(source.id, [])
+
+    forked_items = []
+    if original_items:
+        items_payload = [
+            WatchlistItemCreateWithoutId(
+                symbol=i.symbol,
+                exchange=i.exchange,
+                note=i.note,
+                position=i.position,
+                percentage=i.percentage,
+            )
+            for i in original_items
+        ]
+        forked_items = add_many_items_to_watchlist(
+            session=session,
+            watchlist_id=forked.id,
+            items=items_payload,
+        )
+
+    # 5. Increment fork count on source
+    source.fork_count = (source.fork_count or 0) + 1
+    session.add(source)
+    session.commit()
+    session.refresh(forked)
+
+    return WatchlistForkOut(
+        message="Watchlist forked successfully.",
+        forked_watchlist=forked,
+        forked_items=forked_items,
+    )

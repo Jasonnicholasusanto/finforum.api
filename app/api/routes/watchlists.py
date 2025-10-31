@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
-from app.schemas.watchlist import WatchlistOut, WatchlistPublicOut, WatchlistUpdate
+from app.schemas.watchlist import WatchlistForkOut, WatchlistOut, WatchlistPublicOut, WatchlistUpdate
 from app.schemas.watchlist_detail import (
     WatchlistDetail,
     WatchlistDetailCreateRequest,
@@ -28,6 +28,7 @@ from app.services.watchlist_service import (
     create_watchlist_for_user,
     delete_watchlist,
     delete_watchlist_item,
+    fork_watchlist,
     get_all_user_related_watchlists,
     get_user_bookmarked_watchlists,
     get_watchlists_shared_with_user,
@@ -548,3 +549,25 @@ def list_user_bookmarks_route(
         offset=offset,
     )
     return {"count": len(results), "results": results}
+
+
+@router.post("/{watchlist_id}/fork", response_model=WatchlistForkOut)
+def fork_watchlist_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Fork (clone) a public watchlist into the current user's account.
+    """
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    result = fork_watchlist(
+        session=db,
+        watchlist_id=watchlist_id,
+        user_profile_id=profile.id,
+    )
+
+    return result

@@ -153,6 +153,37 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
             if "ux_watchlist_user_name" in str(e.orig):
                 raise ValueError("You already have a watchlist with this name.")
             raise ValueError(f"Failed to create watchlist: {str(e)}")
+        
+    def fork(
+        self,
+        session: Session,
+        *,
+        source_watchlist: Watchlist,
+        new_owner_id: uuid.UUID,
+    ) -> Watchlist:
+        """
+        Clone an existing (public) watchlist to a new owner.
+
+        The forked watchlist will:
+          - Copy name/description/visibility (set to private)
+          - Record fork lineage fields
+        """
+        fork_data = WatchlistCreate(
+            name=f"{source_watchlist.name} (fork)",
+            description=source_watchlist.description,
+            visibility=WatchlistVisibility.PRIVATE.value,
+            is_default=False,
+            forked_from_id=source_watchlist.id,
+        )
+
+        # Prefer the original_author_id chain if set
+        if source_watchlist.original_author_id:
+            fork_data.original_author_id = source_watchlist.original_author_id
+        else:
+            fork_data.original_author_id = source_watchlist.user_id
+
+        forked = self.create(session, owner_id=new_owner_id, obj_in=fork_data)
+        return forked
 
     def update(
         self, session: Session, *, id: int, obj_in: WatchlistUpdate
