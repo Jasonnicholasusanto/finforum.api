@@ -736,15 +736,17 @@ def fork_watchlist(
     source = watchlist_crud.get(session, id=watchlist_id)
     if not source:
         raise HTTPException(status_code=404, detail="Original watchlist not found.")
-    if source.visibility != WatchlistVisibility.PUBLIC.value:
-        raise HTTPException(
-            status_code=403, detail="Only public watchlists can be forked."
-        )
-
+    
     # 2. Prevent self-fork
     if str(source.user_id) == str(user_profile_id):
         raise HTTPException(
             status_code=400, detail="You cannot fork your own watchlist."
+        )
+    
+    # 2b. Ensure source is public
+    if source.visibility != WatchlistVisibility.PUBLIC.value:
+        raise HTTPException(
+            status_code=403, detail="Only public watchlists can be forked."
         )
 
     # 3. Create forked watchlist (DB insert)
@@ -795,15 +797,17 @@ def fork_watchlist_custom(
     source = watchlist_crud.get(session, id=watchlist_id)
     if not source:
         raise HTTPException(status_code=404, detail="Watchlist not found.")
-    if source.visibility != WatchlistVisibility.PUBLIC.value:
-        raise HTTPException(
-            status_code=403, detail="Only public watchlists can be forked."
-        )
     
     # 2. Prevent self-fork
     if str(source.user_id) == str(user_profile_id):
         raise HTTPException(
             status_code=400, detail="You cannot fork your own watchlist."
+        )
+    
+    # 2b. Ensure source is public
+    if source.visibility != WatchlistVisibility.PUBLIC.value:
+        raise HTTPException(
+            status_code=403, detail="Only public watchlists can be forked."
         )
 
     # 3. Prepare base fork data & create forked watchlist
