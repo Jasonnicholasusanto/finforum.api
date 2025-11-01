@@ -29,9 +29,13 @@ from app.services.watchlist_service import (
     delete_watchlist,
     delete_watchlist_item,
     fork_watchlist,
+    fork_watchlist_custom,
     get_all_user_related_watchlists,
     get_user_bookmarked_watchlists,
+    get_watchlist_lineage,
     get_watchlists_shared_with_user,
+    list_forks_for_watchlist,
+    list_trending_watchlists,
     load_items_for_watchlists,
     search_public_watchlists_by_name,
     share_watchlist_with_user,
@@ -76,7 +80,6 @@ def get_my_watchlists(
 
     # 3. Return results
     return {
-        "count": len(user_watchlists),
         "limit": limit,
         "offset": offset,
         "results": user_watchlists,
@@ -564,10 +567,94 @@ def fork_watchlist_route(
     if not profile:
         raise HTTPException(status_code=404, detail="User profile not found.")
 
-    result = fork_watchlist(
-        session=db,
-        watchlist_id=watchlist_id,
-        user_profile_id=profile.id,
-    )
+    try:
+        result = fork_watchlist(session=db, watchlist_id=watchlist_id, user_profile_id=profile.id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fork watchlist: {str(e)}")
 
-    return result
+
+@router.post("/{watchlist_id}/fork/custom", response_model=WatchlistForkOut)
+def fork_watchlist_custom_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+    payload: WatchlistUpdate | None = None,
+):
+    """
+    Fork (clone) a public watchlist with optional custom details.
+
+    Example body:
+    {
+        "name": "My personalized tech portfolio",
+        "description": "Adapted from FinForum Top Tech Picks"
+    }
+    """
+    # 1. Get current user profile
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    # 2. Execute fork
+    try:
+        result = fork_watchlist_custom(
+            session=db,
+            watchlist_id=watchlist_id,
+            user_profile_id=profile.id,
+            custom_data=payload,
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fork watchlist: {str(e)}")
+
+
+
+@router.get("/{watchlist_id}/forks", response_model=list[WatchlistOut])
+def get_forked_watchlists(
+    user: CurrentUser,
+    watchlist_id: int,
+    db: SessionDep,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """
+    List all forks of a given watchlist.
+    """
+    try:
+        return list_forks_for_watchlist(
+            session=db, watchlist_id=watchlist_id, limit=limit, offset=offset
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list forks: {str(e)}"
+        )
+
+
+@router.get("/{watchlist_id}/lineage", response_model=list[WatchlistOut])
+def get_watchlist_lineage_route(
+    user: CurrentUser,
+    watchlist_id: int,
+    db: SessionDep,
+):
+    """
+    Return the full lineage of this watchlist (original → current).
+    """
+    return get_watchlist_lineage(session=db, watchlist_id=watchlist_id)
+
+
+@router.get("/trending", response_model=list[WatchlistOut])
+def get_trending_watchlists(
+    user: CurrentUser,
+    db: SessionDep,
+    limit: int = Query(10, ge=1, le=50),
+):
+    """
+    Return trending watchlists, ranked by fork count + votes.
+    """
+    return list_trending_watchlists(session=db, limit=limit)

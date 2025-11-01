@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import ConfigDict, Field
-from sqlmodel import SQLModel
+from pydantic import BaseModel
 
 
-class WatchlistItemBase(SQLModel):
+class WatchlistItemBase(BaseModel):
     symbol: str = Field(min_length=1)
     exchange: str = Field(min_length=1)
     note: Optional[str] = Field(default=None, max_length=1000)
@@ -25,7 +25,7 @@ class WatchlistItemCreateWithoutId(WatchlistItemBase):
     pass
 
 
-class WatchlistItemUpdate(SQLModel):
+class WatchlistItemUpdate(BaseModel):
     symbol: Optional[str] = Field(default=None, min_length=1)
     exchange: Optional[str] = Field(default=None, min_length=1)
     note: Optional[str] = Field(default=None, max_length=1000)

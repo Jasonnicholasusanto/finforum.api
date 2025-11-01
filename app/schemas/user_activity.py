@@ -1,15 +1,14 @@
 from datetime import datetime
 from typing import Annotated, Optional
 import uuid
-from pydantic import ConfigDict
-from sqlmodel import Field, SQLModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 NonNegInt = Annotated[int, Field(ge=0)]
 
 
 # Shared fields for input/output schemas
-class UserActivityBase(SQLModel):
+class UserActivityBase(BaseModel):
     topics_created: NonNegInt = 0
     entries_created: NonNegInt = 0
     comments_created: NonNegInt = 0
@@ -30,7 +29,7 @@ class UserActivityCreate(UserActivityBase):
     model_config = ConfigDict(extra="forbid")
 
 
-class UserActivityUpdate(SQLModel):
+class UserActivityUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     topics_created: Optional[NonNegInt] = None
@@ -56,7 +55,7 @@ class UserActivityPublic(UserActivityBase):
     updated_at: datetime
 
 
-class UserActivityPointsBreakdown(SQLModel):
+class UserActivityPointsBreakdown(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     total_points: NonNegInt

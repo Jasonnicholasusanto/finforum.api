@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Dict, Iterable, List, Union
+from datetime import datetime, timezone
+from typing import Dict, Iterable, List, Optional, Union
 import uuid
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
@@ -53,7 +54,18 @@ def get_all_user_related_watchlists(
     )
     owned_watchlists = list(session.exec(owned_stmt).all())
 
-    # 2. Watchlists SHARED with the user
+    # 2. Watchlists FORKED by the user
+    forked_stmt = (
+        select(Watchlist)
+        .where(
+            Watchlist.user_id == user_profile_id,
+            Watchlist.forked_from_id.is_not(None),
+        )
+        .order_by(Watchlist.created_at.desc())
+    )
+    forked_watchlists = list(session.exec(forked_stmt).all())
+
+    # 3. Watchlists SHARED with the user
     shared_stmt = (
         select(Watchlist)
         .join(WatchlistShare, WatchlistShare.watchlist_id == Watchlist.id)
@@ -62,7 +74,7 @@ def get_all_user_related_watchlists(
     )
     shared_watchlists = list(session.exec(shared_stmt).all())
 
-    # 3. Watchlists BOOKMARKED by the user
+    # 4. Watchlists BOOKMARKED by the user
     bookmarked_stmt = (
         select(Watchlist)
         .join(WatchlistBookmark, WatchlistBookmark.watchlist_id == Watchlist.id)
@@ -71,9 +83,10 @@ def get_all_user_related_watchlists(
     )
     bookmarked_watchlists = list(session.exec(bookmarked_stmt).all())
 
-    # Optionally apply limit/offset across the combined list (to-do)
+    # Apply pagination to each subset
     if limit:
         owned_watchlists = owned_watchlists[offset : offset + limit]
+        forked_watchlists = forked_watchlists[offset : offset + limit]
         shared_watchlists = shared_watchlists[offset : offset + limit]
         bookmarked_watchlists = bookmarked_watchlists[offset : offset + limit]
 
@@ -83,6 +96,10 @@ def get_all_user_related_watchlists(
             WatchlistOut.model_validate(w, from_attributes=True)
             for w in owned_watchlists
         ],
+        "forked": [
+            WatchlistOut.model_validate(w, from_attributes=True)
+            for w in forked_watchlists
+        ],
         "shared": [
             WatchlistOut.model_validate(w, from_attributes=True)
             for w in shared_watchlists
@@ -91,8 +108,10 @@ def get_all_user_related_watchlists(
             WatchlistOut.model_validate(w, from_attributes=True)
             for w in bookmarked_watchlists
         ],
+        "total_count": len(owned_watchlists) + len(forked_watchlists) + len(shared_watchlists) + len(bookmarked_watchlists),
         "counts": {
             "owned": len(owned_watchlists),
+            "forked": len(forked_watchlists),
             "shared": len(shared_watchlists),
             "bookmarked": len(bookmarked_watchlists),
         },
@@ -279,7 +298,8 @@ def add_many_items_to_watchlist(
 
     normalized_items = [
         WatchlistItemCreate(
-            watchlist_id=watchlist_id, **item.model_dump(exclude_unset=True)
+            watchlist_id=watchlist_id,
+            **{k: v for k, v in item.model_dump().items() if k != "watchlist_id"},
         )
         for item in items
     ]
@@ -740,20 +760,10 @@ def fork_watchlist(
 
     forked_items = []
     if original_items:
-        items_payload = [
-            WatchlistItemCreateWithoutId(
-                symbol=i.symbol,
-                exchange=i.exchange,
-                note=i.note,
-                position=i.position,
-                percentage=i.percentage,
-            )
-            for i in original_items
-        ]
         forked_items = add_many_items_to_watchlist(
             session=session,
             watchlist_id=forked.id,
-            items=items_payload,
+            items=original_items,
         )
 
     # 5. Increment fork count on source
@@ -767,3 +777,120 @@ def fork_watchlist(
         forked_watchlist=forked,
         forked_items=forked_items,
     )
+
+
+def fork_watchlist_custom(
+    session: Session,
+    *,
+    watchlist_id: int,
+    user_profile_id: uuid.UUID,
+    custom_data: Optional[WatchlistUpdate] = None,
+):
+    """
+    Fork (clone) a public watchlist, optionally overriding name/description/visibility.
+
+    If no custom_data is provided, the fork uses the source watchlist’s existing fields.
+    """
+    # 1. Get the source watchlist
+    source = watchlist_crud.get(session, id=watchlist_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Watchlist not found.")
+    if source.visibility != WatchlistVisibility.PUBLIC.value:
+        raise HTTPException(
+            status_code=403, detail="Only public watchlists can be forked."
+        )
+    
+    # 2. Prevent self-fork
+    if str(source.user_id) == str(user_profile_id):
+        raise HTTPException(
+            status_code=400, detail="You cannot fork your own watchlist."
+        )
+
+    # 3. Prepare base fork data & create forked watchlist
+    if custom_data is None:
+        forked = watchlist_crud.fork(
+            session=session,
+            source_watchlist=source,
+            new_owner_id=user_profile_id,
+        )
+    else:
+        fork_data = WatchlistCreate(
+            name=custom_data.name or f"{source.name} (forked)",
+            description=custom_data.description or source.description,
+            visibility=custom_data.visibility or WatchlistVisibility.PRIVATE.value,
+            is_default=False,
+            forked_from_id=source.id,
+            forked_at=datetime.now(timezone.utc),
+            original_author_id=(
+                source.original_author_id or source.user_id
+            ),
+        )
+
+        forked = watchlist_crud.create(session, owner_id=user_profile_id, obj_in=fork_data)
+
+    # 4. Copy items from original to fork
+    items_map = load_items_for_watchlists(session, [source.id])
+    original_items = items_map.get(source.id, [])
+
+    forked_items = []
+    if original_items:
+        forked_items = add_many_items_to_watchlist(
+            session=session,
+            watchlist_id=forked.id,
+            items=original_items,
+        )
+
+    add_many_items_to_watchlist(session=session, watchlist_id=forked.id, items=forked_items)
+
+    # 5. Increment fork count on the source
+    source.fork_count = (source.fork_count or 0) + 1
+    session.add(source)
+    session.commit()
+    session.refresh(forked)
+
+    return {
+        "message": "Watchlist forked successfully.",
+        "forked_watchlist": forked,
+        "forked_items": forked_items,
+    }
+
+
+
+def list_forks_for_watchlist(
+    session: Session,
+    *,
+    watchlist_id: int,
+    limit: int = 50,
+    offset: int = 0,
+):
+    forks = watchlist_crud.list_forks_of_watchlist(
+        session=session,
+        watchlist_id=watchlist_id,
+        limit=limit,
+        offset=offset,
+    )
+
+    return [WatchlistOut.model_validate(f, from_attributes=True) for f in forks]
+
+
+def list_trending_watchlists(session: Session, *, limit: int = 10):
+    trending = watchlist_crud.list_trending(session=session, limit=limit)
+    return [WatchlistOut.model_validate(w, from_attributes=True) for w in trending]
+
+
+def get_watchlist_lineage(session: Session, *, watchlist_id: int) -> list[WatchlistOut]:
+    """
+    Recursively traverse the lineage chain for a given watchlist,
+    from the current one up to the original ancestor.
+    """
+    lineage = []
+    current = watchlist_crud.get(session, id=watchlist_id)
+
+    while current:
+        lineage.append(current)
+        if not current.forked_from_id:
+            break
+        current = watchlist_crud.get(session, id=current.forked_from_id)
+
+    lineage.reverse()  # show from oldest → newest
+    return [WatchlistOut.model_validate(w, from_attributes=True) for w in lineage]
