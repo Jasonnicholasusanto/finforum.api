@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from math import log10
 import uuid
 from typing import List, Optional
 
@@ -142,15 +143,31 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
     def list_trending(self, session: Session, *, limit: int = 10) -> list[Watchlist]:
         """
         Return top watchlists sorted by combined fork_count and vote totals.
+
+        The formula used balances:
+        1. Popularity (log scaling) — big lists don’t dominate forever
+        2. Freshness (time decay) — recent lists trend faster
+        3. Engagement type (weights) — deep vs. shallow engagement
+
+
         """
-        popularity_score = (
-            func.coalesce(Watchlist.fork_count, 0) * 1.0
-        ) + func.coalesce(func.sum(Vote.vote), 0)
+        now = datetime.now(timezone.utc)
+
+        # EXTRACT epoch returns in seconds; convert to days by dividing by 86400
+        age_days = func.extract("epoch", func.age(now, Watchlist.updated_at)) / 86400.0
+        total_votes = func.coalesce(func.sum(Vote.vote), 0)
+        fork_count = func.coalesce(Watchlist.fork_count, 0)
+
+        score = (
+            func.log(1 + (3 * fork_count + total_votes)) / func.log(10)
+        ) / func.pow(1 + age_days, 0.5)
+
         stmt = (
             select(Watchlist)
             .outerjoin(Vote, Vote.watchlist_id == Watchlist.id)
+            .where(Watchlist.visibility == WatchlistVisibility.PUBLIC.value)
             .group_by(Watchlist.id)
-            .order_by(desc(popularity_score))
+            .order_by(desc(score))
             .limit(limit)
         )
 
