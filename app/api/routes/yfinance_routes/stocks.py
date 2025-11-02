@@ -36,7 +36,7 @@ async def get_alpha_vantage_ticker_data(symbol: str, user: CurrentUser):
 async def get_ticker_info(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
-        info = ticker_data.info
+        info = ticker_data.get_info()
         return TickerInfoResponse(**info)
     except HTTPException:
         raise
@@ -72,9 +72,7 @@ async def get_ticker_fast_info(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
 
-        print(ticker_data.fast_info)
-
-        fast_info = ticker_data.fast_info
+        fast_info = ticker_data.get_fast_info()
         fast_info = TickerFastInfoResponse(symbol=symbol.upper(), **fast_info)
         return fast_info
     except HTTPException:

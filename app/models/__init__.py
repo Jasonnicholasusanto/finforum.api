@@ -15,6 +15,7 @@ from .watchlist import Watchlist
 from .watchlist_bookmark import WatchlistBookmark
 from .watchlist_item import WatchlistItem
 from .watchlist_share import WatchlistShare
+from .vote import Vote
 
 __all__ = [
     "User",
@@ -27,4 +28,5 @@ __all__ = [
     "WatchlistBookmark",
     "WatchlistItem",
     "WatchlistShare",
+    "Vote",
 ]

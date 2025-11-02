@@ -10,9 +10,13 @@ from app.schemas.watchlist_item import WatchlistItemCreate, WatchlistItemUpdate
 class CRUDWatchlistItem(
     CRUDBase[WatchlistItem, WatchlistItemCreate, WatchlistItemUpdate]
 ):
-    def list_by_watchlist(
+    def list_by_watchlist_id(
         self, session: Session, *, watchlist_id: int
     ) -> List[WatchlistItem]:
+        """
+        Retrieve all items in a given watchlist.
+        Ordered by position (if present) and creation time.
+        """
         stmt = (
             select(WatchlistItem)
             .where(WatchlistItem.watchlist_id == watchlist_id)

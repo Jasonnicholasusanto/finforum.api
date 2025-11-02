@@ -1,7 +1,6 @@
 from __future__ import annotations  # this enables self-referencing types
 from typing import List, Optional
-from pydantic import BaseModel
-from sqlmodel import Field
+from pydantic import BaseModel, Field
 
 
 class NavbarRouteBase(BaseModel):

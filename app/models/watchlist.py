@@ -23,7 +23,7 @@ class Watchlist(SQLModel, table=True):
         {"schema": "public"},
     )
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int = Field(default=None, primary_key=True)
 
     user_id: UUID = Field(foreign_key="public.user_profile.id", index=True)
 
@@ -40,7 +40,7 @@ class Watchlist(SQLModel, table=True):
                 WatchlistVisibility,
                 name="watchlist_visibility",
                 schema="public",
-                create_type=False, 
+                create_type=False,
                 values_callable=lambda e: [i.value for i in e],
                 validate_strings=True,
             ),
@@ -48,6 +48,11 @@ class Watchlist(SQLModel, table=True):
             server_default=text("'private'::watchlist_visibility"),
         )
     )
+
+    forked_from_id: int = Field(foreign_key="public.watchlist.id", index=True)
+    forked_at: Optional[datetime] = None
+    fork_count: Optional[int] = 0
+    original_author_id: UUID = Field(foreign_key="public.user_profile.id", index=True)
 
     created_at: datetime = Field(
         sa_column=Column(

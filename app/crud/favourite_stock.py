@@ -5,7 +5,9 @@ from app.schemas.favourite_stock import FavouriteStockCreate, FavouriteStockUpda
 from app.crud.base import CRUDBase
 
 
-class CRUDFavouriteStock(CRUDBase[FavouriteStock, FavouriteStockCreate, FavouriteStockUpdate]):
+class CRUDFavouriteStock(
+    CRUDBase[FavouriteStock, FavouriteStockCreate, FavouriteStockUpdate]
+):
     def get_by_id(self, db: Session, *, id: int) -> Optional[FavouriteStock]:
         statement = select(FavouriteStock).where(FavouriteStock.id == id)
         return db.exec(statement).first()
@@ -14,8 +16,7 @@ class CRUDFavouriteStock(CRUDBase[FavouriteStock, FavouriteStockCreate, Favourit
         self, db: Session, *, user_id: str, symbol: str
     ) -> Optional[FavouriteStock]:
         statement = select(FavouriteStock).where(
-            FavouriteStock.user_id == user_id,
-            FavouriteStock.symbol == symbol
+            FavouriteStock.user_id == user_id, FavouriteStock.symbol == symbol
         )
         return db.exec(statement).first()
 

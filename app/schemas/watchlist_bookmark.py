@@ -1,7 +1,7 @@
 import uuid
-from sqlmodel import SQLModel
+from pydantic import BaseModel
 
 
-class WatchlistBookmarkBase(SQLModel):
+class WatchlistBookmarkBase(BaseModel):
     watchlist_id: int
     user_id: uuid.UUID

@@ -172,6 +172,7 @@ def update_user_profile(
     updated = user_profile_crud.update(session, id=user_id, obj_in=profile_update)
     return UserProfileMe.model_validate(updated) if updated else None
 
+
 def update_user_email_address(
     session: Session,
     *,

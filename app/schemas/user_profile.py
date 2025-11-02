@@ -45,6 +45,7 @@ class UserProfileUpdateEmail(BaseModel):
 
     email_address: EmailStr = Field(max_length=255)
 
+
 # Properties to receive on item update
 class UserProfileUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)

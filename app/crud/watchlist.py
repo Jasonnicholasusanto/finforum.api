@@ -1,16 +1,20 @@
 # app/crud/watchlist.py
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from math import log10
 import uuid
 from typing import List, Optional
 
 from sqlalchemy import func, update as sa_update
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, desc, select
 
 from app.crud.base import CRUDBase
 from app.models.user_profile import UserProfile
+from app.models.vote import Vote
 from app.models.watchlist import Watchlist
+from app.models.watchlist_item import WatchlistItem
 from app.schemas.watchlist import WatchlistCreate, WatchlistUpdate, WatchlistVisibility
 
 
@@ -67,6 +71,17 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
 
         return session.exec(stmt).first()
 
+    def get_default_for_user(
+        self, session: Session, *, user_id: uuid.UUID
+    ) -> Watchlist | None:
+        stmt = (
+            select(Watchlist)
+            .where(Watchlist.user_id == user_id, Watchlist.is_default.is_(True))
+            .limit(1)
+        )
+        return session.exec(stmt).first()
+
+    # ---- LISTs -----
     def list_public_by_name(
         self, session: Session, *, name: str, limit: int = 20, offset: int = 0
     ) -> List[Watchlist]:
@@ -110,17 +125,55 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
         )
         return list(session.exec(stmt).all())
 
-    def get_default_for_user(
-        self, session: Session, *, user_id: uuid.UUID
-    ) -> Watchlist | None:
+    def list_forks_of_watchlist(
+        self, session: Session, *, watchlist_id: int, limit: int = 50, offset: int = 0
+    ) -> list[Watchlist]:
+        """
+        Return all watchlists that were forked from the given watchlist.
+        """
         stmt = (
             select(Watchlist)
-            .where(Watchlist.user_id == user_id, Watchlist.is_default.is_(True))
-            .limit(1)
+            .where(Watchlist.forked_from_id == watchlist_id)
+            .order_by(Watchlist.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
-        return session.exec(stmt).first()
+        return list(session.exec(stmt).all())
 
-    # ----- CREATE / UPDATE / DELETE -----
+    def list_trending(self, session: Session, *, limit: int = 10) -> list[Watchlist]:
+        """
+        Return top watchlists sorted by combined fork_count and vote totals.
+
+        The formula used balances:
+        1. Popularity (log scaling) — big lists don’t dominate forever
+        2. Freshness (time decay) — recent lists trend faster
+        3. Engagement type (weights) — deep vs. shallow engagement
+
+
+        """
+        now = datetime.now(timezone.utc)
+
+        # EXTRACT epoch returns in seconds; convert to days by dividing by 86400
+        age_days = func.extract("epoch", func.age(now, Watchlist.updated_at)) / 86400.0
+        total_votes = func.coalesce(func.sum(Vote.vote), 0)
+        fork_count = func.coalesce(Watchlist.fork_count, 0)
+
+        score = (
+            func.log(1 + (3 * fork_count + total_votes)) / func.log(10)
+        ) / func.pow(1 + age_days, 0.5)
+
+        stmt = (
+            select(Watchlist)
+            .outerjoin(Vote, Vote.watchlist_id == Watchlist.id)
+            .where(Watchlist.visibility == WatchlistVisibility.PUBLIC.value)
+            .group_by(Watchlist.id)
+            .order_by(desc(score))
+            .limit(limit)
+        )
+
+        return list(session.exec(stmt).all())
+
+    # ----- CREATE / FORK / UPDATE / REMOVE / PULL -----
     def create(
         self,
         session: Session,
@@ -142,6 +195,9 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
                     .values(is_default=False)
                 )
 
+            if not obj_in.original_author_id:
+                obj_in.original_author_id = owner_id
+
             # 2. Create the new watchlist
             db_obj = super().create(session, obj_in=obj_in, user_id=owner_id)
 
@@ -153,6 +209,38 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
             if "ux_watchlist_user_name" in str(e.orig):
                 raise ValueError("You already have a watchlist with this name.")
             raise ValueError(f"Failed to create watchlist: {str(e)}")
+
+    def fork(
+        self,
+        session: Session,
+        *,
+        source_watchlist: Watchlist,
+        new_owner_id: uuid.UUID,
+    ) -> Watchlist:
+        """
+        Clone an existing (public) watchlist to a new owner.
+
+        The forked watchlist will:
+          - Copy name/description/visibility (set to private)
+          - Record fork lineage fields
+        """
+        fork_data = WatchlistCreate(
+            name=f"{source_watchlist.name} (forked)",
+            description=source_watchlist.description,
+            visibility=WatchlistVisibility.PRIVATE.value,
+            is_default=False,
+            forked_from_id=source_watchlist.id,
+            forked_at=datetime.now(timezone.utc),
+        )
+
+        # Prefer the original_author_id chain if set
+        if source_watchlist.original_author_id:
+            fork_data.original_author_id = source_watchlist.original_author_id
+        else:
+            fork_data.original_author_id = source_watchlist.user_id
+
+        forked = self.create(session, owner_id=new_owner_id, obj_in=fork_data)
+        return forked
 
     def update(
         self, session: Session, *, id: int, obj_in: WatchlistUpdate
@@ -194,6 +282,28 @@ class CRUDWatchlist(CRUDBase[Watchlist, WatchlistCreate, WatchlistUpdate]):
             return None
 
         return super().remove(session, id=id)
+
+    def remove_all_items_in_watchlist(
+        self,
+        session: Session,
+        *,
+        watchlist_id: int,
+    ) -> int:
+        """
+        Delete all items associated with a watchlist.
+        Returns the number of items deleted.
+        """
+        stmt = select(Watchlist).where(Watchlist.id == watchlist_id)
+        watchlist = session.exec(stmt).first()
+        if not watchlist:
+            return 0
+
+        result = session.exec(
+            delete(WatchlistItem).where(WatchlistItem.watchlist_id == watchlist_id)
+        )
+
+        session.commit()
+        return result.rowcount or 0
 
 
 watchlist = CRUDWatchlist(Watchlist)

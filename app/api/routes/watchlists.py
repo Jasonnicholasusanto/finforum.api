@@ -3,7 +3,12 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
-from app.schemas.watchlist import WatchlistOut, WatchlistPublicOut, WatchlistUpdate
+from app.schemas.watchlist import (
+    WatchlistForkOut,
+    WatchlistOut,
+    WatchlistPublicOut,
+    WatchlistUpdate,
+)
 from app.schemas.watchlist_detail import (
     WatchlistDetail,
     WatchlistDetailCreateRequest,
@@ -13,6 +18,7 @@ from app.schemas.watchlist_item import (
     WatchlistItemBase,
     WatchlistItemCreate,
     WatchlistItemCreateWithoutId,
+    WatchlistItemOut,
     WatchlistItemUpdate,
 )
 from app.schemas.watchlist_share import (
@@ -28,10 +34,17 @@ from app.services.watchlist_service import (
     create_watchlist_for_user,
     delete_watchlist,
     delete_watchlist_item,
+    fork_watchlist,
+    fork_watchlist_custom,
     get_all_user_related_watchlists,
     get_user_bookmarked_watchlists,
+    get_watchlist_items_securely,
+    get_watchlist_lineage,
     get_watchlists_shared_with_user,
+    list_forks_for_watchlist,
+    list_trending_watchlists,
     load_items_for_watchlists,
+    pull_forked_watchlist,
     search_public_watchlists_by_name,
     share_watchlist_with_user,
     unbookmark_watchlist,
@@ -75,16 +88,50 @@ def get_my_watchlists(
 
     # 3. Return results
     return {
-        "count": len(user_watchlists),
         "limit": limit,
         "offset": offset,
         "results": user_watchlists,
     }
 
 
+@router.get("/{watchlist_id}/items", response_model=list[WatchlistItemOut])
+def get_watchlist_items_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Retrieve items in a watchlist.
+
+    Access allowed if:
+      - The user owns the watchlist, OR
+      - The watchlist is shared with them, OR
+      - The watchlist is public
+    """
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    try:
+        items = get_watchlist_items_securely(
+            session=db,
+            watchlist_id=watchlist_id,
+            user_profile_id=profile.id,
+        )
+        return [
+            WatchlistItemOut.model_validate(it, from_attributes=True) for it in items
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve items: {str(e)}"
+        )
+
+
 # Public: Search public watchlists by name (case-insensitive, partial match)
 @router.get("/@{name}", response_model=WatchlistsDetail)
-def get_watchlists_by_name(
+def get_public_watchlists_by_name(
     name: str,
     user: CurrentUser,
     db: SessionDep,
@@ -104,7 +151,7 @@ def get_watchlists_by_name(
         db, name=name, limit=limit, offset=offset
     )
     if not watchlists:
-        return []
+        return WatchlistsDetail(watchlists=[])
 
     # Batch-load items to avoid N+1
     id_list = [w.id for w in watchlists if w.id is not None]
@@ -182,7 +229,7 @@ def create_watchlist(
 
 
 @router.post("/add-item")
-def add_watchlist_item(
+def add_watchlist_item_to_watchlist(
     item: WatchlistItemCreate,
     user: CurrentUser,
     db: SessionDep,
@@ -205,7 +252,7 @@ def add_watchlist_item(
 
 
 @router.post("/add-items/{watchlist_id}")
-def add_bulk_watchlist_items(
+def add_bulk_watchlist_items_to_watchlist(
     watchlist_id: int,
     items: List[WatchlistItemCreateWithoutId],
     user: CurrentUser,
@@ -259,7 +306,7 @@ def add_bulk_watchlist_items(
 
 
 @router.delete("/item/{item_id}", status_code=status.HTTP_200_OK)
-def delete_watchlist_item_route(
+def delete_watchlist_item_from_watchlist(
     item_id: int,
     user: CurrentUser,
     db: SessionDep,
@@ -548,3 +595,144 @@ def list_user_bookmarks_route(
         offset=offset,
     )
     return {"count": len(results), "results": results}
+
+
+@router.post("/{watchlist_id}/fork", response_model=WatchlistForkOut)
+def fork_watchlist_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Fork (clone) a public watchlist into the current user's account.
+    """
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    try:
+        result = fork_watchlist(
+            session=db, watchlist_id=watchlist_id, user_profile_id=profile.id
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fork watchlist: {str(e)}"
+        )
+
+
+@router.post("/{watchlist_id}/fork/custom", response_model=WatchlistForkOut)
+def fork_watchlist_custom_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+    payload: WatchlistUpdate | None = None,
+):
+    """
+    Fork (clone) a public watchlist with optional custom details.
+
+    Example body:
+    {
+        "name": "My personalized tech portfolio",
+        "description": "Adapted from FinForum Top Tech Picks"
+    }
+    """
+    # 1. Get current user profile
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    # 2. Execute fork
+    try:
+        result = fork_watchlist_custom(
+            session=db,
+            watchlist_id=watchlist_id,
+            user_profile_id=profile.id,
+            custom_data=payload,
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fork watchlist: {str(e)}"
+        )
+
+
+@router.post("/{watchlist_id}/pull", response_model=dict)
+def pull_forked_watchlist_route(
+    watchlist_id: int,
+    user: CurrentUser,
+    db: SessionDep,
+):
+    """
+    Pull (sync) the latest changes from the original watchlist into this fork.
+
+    Only works if:
+      - The watchlist was forked from another
+      - The original is still PUBLIC
+    """
+    profile = get_user_profile_by_auth(db, auth_id=user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    try:
+        result = pull_forked_watchlist(
+            session=db,
+            watchlist_id=watchlist_id,
+            user_profile_id=profile.id,
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to pull watchlist: {str(e)}"
+        )
+
+
+@router.get("/{watchlist_id}/forks", response_model=list[WatchlistOut])
+def get_forked_watchlists(
+    user: CurrentUser,
+    watchlist_id: int,
+    db: SessionDep,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """
+    List all forks of a given watchlist.
+    """
+    try:
+        return list_forks_for_watchlist(
+            session=db, watchlist_id=watchlist_id, limit=limit, offset=offset
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list forks: {str(e)}")
+
+
+@router.get("/{watchlist_id}/lineage", response_model=list[WatchlistOut])
+def get_watchlist_lineage_route(
+    user: CurrentUser,
+    watchlist_id: int,
+    db: SessionDep,
+):
+    """
+    Return the full lineage of this watchlist (original → current).
+    """
+    return get_watchlist_lineage(session=db, watchlist_id=watchlist_id)
+
+
+@router.get("/trending", response_model=list[WatchlistOut])
+def get_trending_watchlists(
+    user: CurrentUser,
+    db: SessionDep,
+    limit: int = Query(10, ge=1, le=50),
+):
+    """
+    Return trending watchlists, ranked by fork count + votes.
+    """
+    return list_trending_watchlists(session=db, limit=limit)

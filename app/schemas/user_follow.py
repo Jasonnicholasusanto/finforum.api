@@ -1,9 +1,9 @@
-from sqlmodel import SQLModel
+from pydantic import BaseModel
 
 from app.schemas.user_profile import UserProfilePublic
 
 
-class PaginatedFollowersResponse(SQLModel):
+class PaginatedFollowersResponse(BaseModel):
     total: int
     limit: int
     offset: int
