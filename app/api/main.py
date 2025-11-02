@@ -1,6 +1,15 @@
 from fastapi import APIRouter
 
-from app.api.routes import auth, me, navbar, utils, users, watchlists, yfinance_main, favourite_stock
+from app.api.routes import (
+    auth,
+    me,
+    navbar,
+    utils,
+    users,
+    watchlists,
+    yfinance_main,
+    favourite_stock,
+)
 
 api_router = APIRouter()
 api_router.include_router(me.router)

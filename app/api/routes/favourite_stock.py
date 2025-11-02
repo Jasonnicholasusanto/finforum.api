@@ -23,16 +23,18 @@ def add_favourite(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User profile not found.",
         )
-    
+
     payload.symbol = payload.symbol.upper()
-    
-    existing = favourite_stock_service.get_favourite_stock_by_symbol(db, user_id=profile.id, symbol=payload.symbol)
+
+    existing = favourite_stock_service.get_favourite_stock_by_symbol(
+        db, user_id=profile.id, symbol=payload.symbol
+    )
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Stock '{payload.symbol}' is already in your favourites list.",
         )
-    
+
     try:
         ticker = yf.Ticker(payload.symbol)
         info = ticker.info
@@ -40,8 +42,10 @@ def add_favourite(
         payload.exchange = info.get("exchange", "Unknown")
         payload.company_name = info.get("longName", "Unknown")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid symbol '{payload.symbol}': {str(e)}")
-    
+        raise HTTPException(
+            status_code=400, detail=f"Invalid symbol '{payload.symbol}': {str(e)}"
+        )
+
     return favourite_stock_service.add_favourite_stock(db, profile.id, payload)
 
 

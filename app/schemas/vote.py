@@ -19,16 +19,19 @@ class VoteBase(BaseModel):
 
 class VoteCreate(VoteBase):
     """Schema for creating a new vote."""
+
     pass
 
 
 class VoteUpdate(BaseModel):
     """Schema for updating an existing vote (toggle or change)."""
+
     vote: Optional[int] = Field(None, description="Allowed values: 1 or -1")
 
 
 class VoteOut(VoteBase):
     """Schema for returning a vote with metadata."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int

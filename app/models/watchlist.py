@@ -40,7 +40,7 @@ class Watchlist(SQLModel, table=True):
                 WatchlistVisibility,
                 name="watchlist_visibility",
                 schema="public",
-                create_type=False, 
+                create_type=False,
                 values_callable=lambda e: [i.value for i in e],
                 validate_strings=True,
             ),

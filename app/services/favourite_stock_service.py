@@ -13,11 +13,13 @@ def list_favourite_stocks(session: Session, user_id: str):
 
 
 def add_favourite_stock(session: Session, user_id: str, payload: FavouriteStockCreate):
-    existing = crud_favourite_stock.get_by_symbol(session, user_id=user_id, symbol=payload.symbol)
+    existing = crud_favourite_stock.get_by_symbol(
+        session, user_id=user_id, symbol=payload.symbol
+    )
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Stock already in favourites list."
+            detail="Stock already in favourites list.",
         )
 
     new_item = crud_favourite_stock.create(
@@ -28,16 +30,21 @@ def add_favourite_stock(session: Session, user_id: str, payload: FavouriteStockC
     return new_item
 
 
-def remove_favourite_stock(session: Session, id: int,):
+def remove_favourite_stock(
+    session: Session,
+    id: int,
+):
     stock = crud_favourite_stock.get_by_id(session, id=id)
     if not stock:
         raise HTTPException(status_code=404, detail="Favourite stock not found.")
-    
+
     deleted_stock = crud_favourite_stock.remove(session, id=stock.id)
     return deleted_stock
 
 
-def update_favourite_stock(session: Session, user_id: str, id: int, data: FavouriteStockUpdate):
+def update_favourite_stock(
+    session: Session, user_id: str, id: int, data: FavouriteStockUpdate
+):
     stock = crud_favourite_stock.get_by_id(session, user_id=user_id, id=id)
     if not stock:
         raise HTTPException(status_code=404, detail="Favourite stock not found.")

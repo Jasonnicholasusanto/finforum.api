@@ -24,7 +24,7 @@ class WatchlistBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
     visibility: WatchlistVisibility = WatchlistVisibility.PRIVATE.value
-    forked_from_id: Optional[int] = None 
+    forked_from_id: Optional[int] = None
     forked_at: Optional[datetime] = None
     fork_count: int = 0
     original_author_id: Optional[UUID] = None
@@ -65,6 +65,7 @@ class WatchlistForkOut(BaseModel):
     """
     Response model when a watchlist is forked.
     """
+
     message: str
     forked_watchlist: WatchlistOut
     forked_items: Optional[List[WatchlistItemBase]] = None
@@ -74,6 +75,7 @@ class WatchlistForkListOut(BaseModel):
     """
     Response model listing all forks for a given watchlist.
     """
+
     message: str
     count: int
     forks: List[WatchlistPublicOut]
@@ -83,6 +85,7 @@ class WatchlistLineageOut(BaseModel):
     """
     Shows fork lineage for a watchlist (who forked from whom).
     """
+
     original_author_id: UUID
     forked_from_id: Optional[int]
     forked_at: Optional[datetime]

@@ -294,7 +294,7 @@ def update_user_email(
       - auth.users (Supabase Auth)
     """
     email_exists = _email_exists(session=db, email=update.email_address)
-    
+
     if email_exists:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -323,8 +323,7 @@ def update_user_email(
             raise Exception("No user returned from Supabase after update.")
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update email in Supabase Auth: {str(e)}"
+            status_code=500, detail=f"Failed to update email in Supabase Auth: {str(e)}"
         )
 
     # 4. Update DB (public.user_profile)
@@ -335,7 +334,7 @@ def update_user_email(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to update email in local database: {str(e)}"
+            detail=f"Failed to update email in local database: {str(e)}",
         )
 
     return {
@@ -399,7 +398,9 @@ async def upload_banner_image(
             supabase_client.storage.from_("banner-images").remove([old_path])
 
     # 7. Get public URL
-    public_url = supabase_client.storage.from_("banner-images").get_public_url(file_path)
+    public_url = supabase_client.storage.from_("banner-images").get_public_url(
+        file_path
+    )
 
     # 8. Update DB with new URL
     try:
@@ -521,7 +522,9 @@ async def upload_profile_picture(
             supabase_client.storage.from_("profile-pictures").remove([old_path])
 
     # 7. Get public URL
-    public_url = supabase_client.storage.from_("profile-pictures").get_public_url(file_path)
+    public_url = supabase_client.storage.from_("profile-pictures").get_public_url(
+        file_path
+    )
 
     # 8. Update DB with new URL
     try:
@@ -556,7 +559,9 @@ async def delete_profile_picture(
 
     # 2. List all files in this user's folder inside "profile-pictures" bucket
     try:
-        list_res = supabase_client.storage.from_("profile-pictures").list(path=user_folder)
+        list_res = supabase_client.storage.from_("profile-pictures").list(
+            path=user_folder
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

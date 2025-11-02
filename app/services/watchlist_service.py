@@ -12,9 +12,16 @@ from app.models.watchlist import Watchlist
 from app.models.watchlist_bookmark import WatchlistBookmark
 from app.models.watchlist_item import WatchlistItem
 from app.models.watchlist_share import WatchlistShare
-from app.schemas.watchlist import WatchlistCreate, WatchlistForkOut, WatchlistOut, WatchlistUpdate, WatchlistVisibility
+from app.schemas.watchlist import (
+    WatchlistCreate,
+    WatchlistForkOut,
+    WatchlistOut,
+    WatchlistUpdate,
+    WatchlistVisibility,
+)
 from app.schemas.watchlist_bookmark import WatchlistBookmarkBase
 from app.schemas.watchlist_item import (
+    WatchlistItemBase,
     WatchlistItemCreate,
     WatchlistItemCreateWithoutId,
     WatchlistItemUpdate,
@@ -39,17 +46,21 @@ def get_all_user_related_watchlists(
 ) -> dict:
     """
     Fetch all watchlists associated with a user, including:
-      1. Watchlists the user owns,
-      2. Watchlists shared with the user,
-      3. Watchlists the user bookmarked.
+      1. Watchlists the user created (originals),
+      2. Watchlists the user forked from others,
+      3. Watchlists shared with the user,
+      4. Watchlists the user bookmarked.
 
-    Returns a categorized dictionary for clarity.
+    Returns a dictionary categorizing watchlists by their relationship to the user.
     """
 
-    # 1. Watchlists the user OWNS
+    # 1. Watchlists CREATED by the user (excluding forks)
     owned_stmt = (
         select(Watchlist)
-        .where(Watchlist.user_id == user_profile_id)
+        .where(
+            Watchlist.user_id == user_profile_id,
+            Watchlist.forked_from_id.is_(None),
+        )
         .order_by(Watchlist.created_at.desc())
     )
     owned_watchlists = list(session.exec(owned_stmt).all())
@@ -92,7 +103,7 @@ def get_all_user_related_watchlists(
 
     # 4. Build Response
     return {
-        "owned": [
+        "created": [
             WatchlistOut.model_validate(w, from_attributes=True)
             for w in owned_watchlists
         ],
@@ -108,7 +119,10 @@ def get_all_user_related_watchlists(
             WatchlistOut.model_validate(w, from_attributes=True)
             for w in bookmarked_watchlists
         ],
-        "total_count": len(owned_watchlists) + len(forked_watchlists) + len(shared_watchlists) + len(bookmarked_watchlists),
+        "total_count": len(owned_watchlists)
+        + len(forked_watchlists)
+        + len(shared_watchlists)
+        + len(bookmarked_watchlists),
         "counts": {
             "owned": len(owned_watchlists),
             "forked": len(forked_watchlists),
@@ -184,6 +198,53 @@ def load_items_for_watchlists(
     for it in session.exec(stmt).all():
         items_by_wl.setdefault(it.watchlist_id, []).append(it)
     return items_by_wl
+
+
+def get_watchlist_items_securely(
+    session: Session,
+    *,
+    watchlist_id: int,
+    user_profile_id: uuid.UUID,
+) -> list[WatchlistItem]:
+    """
+    Return items for a watchlist if the user has permission to view it.
+
+    Access rules:
+      1. User owns the watchlist, OR
+      2. The watchlist is shared with the user, OR
+      3. The watchlist is public
+    """
+    # 1) Get the watchlist
+    watchlist = watchlist_crud.get(session, id=watchlist_id)
+    if not watchlist:
+        raise HTTPException(status_code=404, detail="Watchlist not found.")
+
+    # 2) Evaluate access with minimal queries
+    is_owner = watchlist.user_id == user_profile_id
+    is_public = watchlist.visibility == WatchlistVisibility.PUBLIC.value
+
+    has_share = False
+    if not (is_owner or is_public):
+        # Only query shares if owner/public checks failed
+        has_share = bool(
+            watchlist_share_crud.get_share(
+                session=session,
+                watchlist_id=watchlist_id,
+                user_id=user_profile_id,
+            )
+        )
+
+    if not (is_owner or is_public or has_share):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this watchlist's items.",
+        )
+
+    # 3) Fetch items after passing all checks
+    return watchlist_item_crud.list_by_watchlist_id(
+        session=session,
+        watchlist_id=watchlist_id,
+    )
 
 
 def user_can_edit_watchlist(
@@ -288,7 +349,7 @@ def add_many_items_to_watchlist(
     *,
     watchlist_id: int,
     items: Iterable[Union[WatchlistItemCreate, WatchlistItemCreateWithoutId]],
-) -> List[WatchlistItem]:
+) -> List[WatchlistItemBase]:
     """
     Add multiple items to the specified watchlist.
     Uses CRUDWatchlistItem.create_many() for persistence.
@@ -314,7 +375,10 @@ def add_many_items_to_watchlist(
     for db_item in db_items:
         session.refresh(db_item)
 
-    return db_items
+    return [
+        WatchlistItemBase.model_validate(db_item, from_attributes=True)
+        for db_item in db_items
+    ]
 
 
 def update_watchlist_item(
@@ -736,13 +800,13 @@ def fork_watchlist(
     source = watchlist_crud.get(session, id=watchlist_id)
     if not source:
         raise HTTPException(status_code=404, detail="Original watchlist not found.")
-    
+
     # 2. Prevent self-fork
     if str(source.user_id) == str(user_profile_id):
         raise HTTPException(
             status_code=400, detail="You cannot fork your own watchlist."
         )
-    
+
     # 2b. Ensure source is public
     if source.visibility != WatchlistVisibility.PUBLIC.value:
         raise HTTPException(
@@ -797,13 +861,13 @@ def fork_watchlist_custom(
     source = watchlist_crud.get(session, id=watchlist_id)
     if not source:
         raise HTTPException(status_code=404, detail="Watchlist not found.")
-    
+
     # 2. Prevent self-fork
     if str(source.user_id) == str(user_profile_id):
         raise HTTPException(
             status_code=400, detail="You cannot fork your own watchlist."
         )
-    
+
     # 2b. Ensure source is public
     if source.visibility != WatchlistVisibility.PUBLIC.value:
         raise HTTPException(
@@ -825,12 +889,12 @@ def fork_watchlist_custom(
             is_default=False,
             forked_from_id=source.id,
             forked_at=datetime.now(timezone.utc),
-            original_author_id=(
-                source.original_author_id or source.user_id
-            ),
+            original_author_id=(source.original_author_id or source.user_id),
         )
 
-        forked = watchlist_crud.create(session, owner_id=user_profile_id, obj_in=fork_data)
+        forked = watchlist_crud.create(
+            session, owner_id=user_profile_id, obj_in=fork_data
+        )
 
     # 4. Copy items from original to fork
     items_map = load_items_for_watchlists(session, [source.id])
@@ -844,8 +908,6 @@ def fork_watchlist_custom(
             items=original_items,
         )
 
-    add_many_items_to_watchlist(session=session, watchlist_id=forked.id, items=forked_items)
-
     # 5. Increment fork count on the source
     source.fork_count = (source.fork_count or 0) + 1
     session.add(source)
@@ -858,6 +920,67 @@ def fork_watchlist_custom(
         "forked_items": forked_items,
     }
 
+
+def pull_forked_watchlist(
+    session: Session,
+    *,
+    watchlist_id: int,
+    user_profile_id: uuid.UUID,
+) -> dict:
+    """
+    Pull the latest changes from the original (source) watchlist into this fork.
+
+    Returns summary info.
+    """
+    # 1. Fetch the fork
+    forked = watchlist_crud.get(session, id=watchlist_id)
+    if not forked:
+        raise HTTPException(status_code=404, detail="Watchlist not found.")
+
+    # 2. Verify ownership
+    if forked.user_id != user_profile_id:
+        raise HTTPException(status_code=403, detail="You can only pull your own forks.")
+
+    # 3. Check lineage
+    if not forked.forked_from_id:
+        raise HTTPException(
+            status_code=400,
+            detail="This watchlist was not forked from another watchlist.",
+        )
+
+    # 4. Get the source
+    source = watchlist_crud.get(session, id=forked.forked_from_id)
+    if not source:
+        raise HTTPException(
+            status_code=404, detail="Original watchlist no longer exists."
+        )
+    if source.visibility != WatchlistVisibility.PUBLIC.value:
+        raise HTTPException(
+            status_code=403, detail="The original watchlist is no longer public."
+        )
+
+    # 5. Perform sync - clear existing items & copy from source
+    watchlist_crud.remove_all_items_in_watchlist(
+        session=session,
+        watchlist_id=forked.id,
+    )
+
+    source_items_map = load_items_for_watchlists(session, [source.id])
+    source_items = source_items_map.get(source.id, [])
+    added_items = []
+    if source_items:
+        added_items = add_many_items_to_watchlist(
+            session=session,
+            watchlist_id=forked.id,
+            items=source_items,
+        )
+
+    return {
+        "message": "Watchlist successfully synced with the original.",
+        "forked_watchlist": added_items,
+        "source_id": source.id,
+        "source_name": source.name,
+    }
 
 
 def list_forks_for_watchlist(
