@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 import yfinance as yf
 
 from app.api.deps import CurrentUser
-from app.models.stocks import TickerInfoResponse
+from app.schemas.stocks import TickerInfoResponse
 from app.utils.global_variables import SECTOR_INDUSTRY_MAP
 
 
