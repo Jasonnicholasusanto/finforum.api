@@ -3,7 +3,7 @@ import yfinance as yf
 from fastapi import HTTPException
 
 from app.api.deps import CurrentUser
-from app.models.stocks import ScreenTickerInfo
+from app.schemas.stocks import ScreenTickerInfo
 
 
 router = APIRouter(prefix="/screen", tags=["screener"])

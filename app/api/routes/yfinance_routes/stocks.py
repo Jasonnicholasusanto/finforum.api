@@ -4,7 +4,7 @@ import yfinance as yf
 import requests
 from app.api.deps import CurrentUser
 from app.core.config import settings
-from app.models.stocks import TickerFastInfoResponse, TickerInfoResponse, TickersRequest
+from app.schemas.stocks import TickerFastInfoResponse, TickerInfoResponse, TickersRequest
 from app.utils.global_variables import STOCK_INTERVALS, STOCK_PERIODS
 
 
