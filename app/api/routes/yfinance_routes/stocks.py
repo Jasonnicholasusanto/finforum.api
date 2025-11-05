@@ -4,7 +4,11 @@ import yfinance as yf
 import requests
 from app.api.deps import CurrentUser
 from app.core.config import settings
-from app.schemas.stocks import TickerFastInfoResponse, TickerInfoResponse, TickersRequest
+from app.schemas.stocks import (
+    TickerFastInfoResponse,
+    TickerInfoResponse,
+    TickersRequest,
+)
 from app.utils.global_variables import STOCK_INTERVALS, STOCK_PERIODS
 
 
@@ -36,8 +40,13 @@ async def get_alpha_vantage_ticker_data(symbol: str, user: CurrentUser):
 async def get_ticker_info(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
-        info = ticker_data.get_info()
-        return TickerInfoResponse(**info)
+        info = TickerInfoResponse(**ticker_data.get_info())
+        if info is None or info.symbol is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Ticker '{symbol}' not found or has no info.",
+            )
+        return info
     except HTTPException:
         raise
     except Exception as e:
@@ -71,9 +80,9 @@ async def get_tickers_info(request: TickersRequest, user: CurrentUser):
 async def get_ticker_fast_info(symbol: str, user: CurrentUser):
     try:
         ticker_data = yf.Ticker(symbol)
-
-        fast_info = ticker_data.get_fast_info()
-        fast_info = TickerFastInfoResponse(symbol=symbol.upper(), **fast_info)
+        fast_info = TickerFastInfoResponse(
+            symbol=symbol.upper(), **ticker_data.get_fast_info()
+        )
         return fast_info
     except HTTPException:
         raise
@@ -363,7 +372,7 @@ async def get_analyst_price_targets(symbol: str, user: CurrentUser):
 ### Ticker Lookup and Search Endpoints
 
 
-@router.get("/lookup/{query}")
+@router.get("/lookup-stock/{query}")
 async def lookup_tickers(
     query: str,
     user: CurrentUser,
@@ -394,12 +403,52 @@ async def lookup_tickers(
         )
 
 
+@router.get("/lookup-all/{query}")
+async def lookup_all(
+    query: str,
+    user: CurrentUser,
+    count: int = Query(10, description="Number of results to return"),
+):
+    try:
+        # Create Lookup object
+        lookup = yf.Lookup(query=query)
+
+        # get_stock returns a Pandas DataFrame
+        df = lookup.get_all(count=count)
+
+        df = df.fillna("")
+
+        if df.empty:
+            return {"query": query, "results": []}
+
+        # Convert DataFrame to list of dicts for JSON response
+        results = df.to_dict(orient="records")
+
+        return {"query": query, "results": results}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
 @router.get("/search/{query}")
-async def search_tickers(query: str, user: CurrentUser):
+async def search_tickers(
+    query: str,
+    user: CurrentUser,
+    max_results: int = Query(10, description="Number of results to return"),
+    recommended: int = Query(10, description="Recommended number of results to return"),
+    enable_fuzzy_query: bool = Query(True, description="Enable fuzzy search"),
+):
     try:
         # Create Search object
         search = yf.Search(
-            query=query, max_results=10, recommended=10, enable_fuzzy_query=True
+            query=query,
+            max_results=max_results,
+            recommended=recommended,
+            enable_fuzzy_query=enable_fuzzy_query,
         )
 
         # Run the search
