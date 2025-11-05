@@ -5,6 +5,7 @@ import requests
 from app.api.deps import CurrentUser
 from app.core.config import settings
 from app.schemas.stocks import (
+    SearchResponse,
     TickerFastInfoResponse,
     TickerInfoResponse,
     TickersRequest,
@@ -372,7 +373,7 @@ async def get_analyst_price_targets(symbol: str, user: CurrentUser):
 ### Ticker Lookup and Search Endpoints
 
 
-@router.get("/lookup-stock/{query}")
+@router.get("/lookup-stocks/{query}")
 async def lookup_tickers(
     query: str,
     user: CurrentUser,
@@ -434,11 +435,12 @@ async def lookup_all(
         )
 
 
-@router.get("/search/{query}")
+@router.get("/search-quotes/{query}")
 async def search_tickers(
     query: str,
     user: CurrentUser,
     max_results: int = Query(10, description="Number of results to return"),
+    
     recommended: int = Query(10, description="Recommended number of results to return"),
     enable_fuzzy_query: bool = Query(True, description="Enable fuzzy search"),
 ):
@@ -459,18 +461,48 @@ async def search_tickers(
 
         # Clean up output
         results = [
-            {
-                "symbol": item.get("symbol"),
-                "short_name": item.get("shortname"),
-                "long_name": item.get("longname"),
-                "exchange": item.get("exchange"),
-                "exchange_timezone": item.get("exchDisp"),
-                "type": item.get("quoteType"),
-            }
+            SearchResponse(**item)
             for item in quotes
         ]
 
         return {"query": query, "results": results}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    
+
+@router.get("/search-all/{query}")
+async def search_all(
+    query: str,
+    user: CurrentUser,
+    max_results: int = Query(10, description="Number of results to return"),
+    news_count: int = Query(10, description="Number of news results to return"),
+    lists_count: int = Query(10, description="Number of lists results to return"),
+    recommended: int = Query(10, description="Recommended number of results to return"),
+    enable_fuzzy_query: bool = Query(True, description="Enable fuzzy search"),
+):
+    try:
+        # Create Search object
+        search = yf.Search(
+            query=query,
+            max_results=max_results,
+            news_count=news_count,
+            lists_count=lists_count,
+            recommended=recommended,
+            enable_fuzzy_query=enable_fuzzy_query,
+        )
+
+        # Run the search
+        search.search()
+
+        # Get all results
+        all_results = search.all
+
+        return {"query": query, "results": all_results}
 
     except HTTPException:
         raise

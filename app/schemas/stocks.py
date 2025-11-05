@@ -438,3 +438,18 @@ class ScreenTickerInfo(BaseModel):
         None, description="GMT Offset in Milliseconds"
     )
     marketState: Optional[str] = Field(None, description="Market State")
+
+
+class SearchResponse(BaseModel):
+    symbol: Optional[str] = Field(None, description="Ticker symbol")
+    shortname: Optional[str] = Field(None, description="Short name of the company")
+    longname: Optional[str] = Field(None, description="Long name of the company")
+    index: Optional[str] = Field(None, description="Index type if applicable")
+    exchange: Optional[str] = Field(None, description="Exchange symbol")
+    exchDisp: Optional[str] = Field(None, description="Exchange where listed")
+    exchange_timezone: Optional[str] = Field(
+        None, description="Timezone of the exchange"
+    )
+    quoteType: Optional[str] = Field(None, description="Type of quote (e.g., EQUITY)")
+    sector: Optional[str] = Field(None, description="Sector of the company")
+    industry: Optional[str] = Field(None, description="Industry of the company")
