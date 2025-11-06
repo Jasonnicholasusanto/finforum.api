@@ -448,9 +448,6 @@ class SearchResponse(BaseModel):
     index: Optional[str] = Field(None, description="Index type if applicable")
     exchange: Optional[str] = Field(None, description="Exchange symbol")
     exchDisp: Optional[str] = Field(None, description="Exchange where listed")
-    exchange_timezone: Optional[str] = Field(
-        None, description="Timezone of the exchange"
-    )
     quoteType: Optional[str] = Field(None, description="Type of quote (e.g., EQUITY)")
     typeDisp: Optional[str] = Field(
         None, description="Display type of the instrument"
