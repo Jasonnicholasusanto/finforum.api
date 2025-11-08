@@ -440,7 +440,6 @@ async def search_tickers(
     query: str,
     user: CurrentUser,
     max_results: int = Query(10, description="Number of results to return"),
-    
     recommended: int = Query(10, description="Recommended number of results to return"),
     enable_fuzzy_query: bool = Query(True, description="Enable fuzzy search"),
 ):
@@ -460,10 +459,7 @@ async def search_tickers(
         quotes = search.quotes
 
         # Clean up output
-        results = [
-            SearchResponse(**item)
-            for item in quotes
-        ]
+        results = [SearchResponse(**item) for item in quotes]
 
         return {"query": query, "results": results}
 
@@ -473,7 +469,7 @@ async def search_tickers(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-    
+
 
 @router.get("/search-all/{query}")
 async def search_all(
