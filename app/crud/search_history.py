@@ -39,7 +39,7 @@ class CRUDSearchHistory(
             .limit(limit)
             .offset(offset)
         )
-        return list(session.exec(stmt).all())
+        return list(session.exec(stmt).scalars().all())
 
     def list_distinct_queries(
         self,
