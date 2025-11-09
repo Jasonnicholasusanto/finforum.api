@@ -1,7 +1,8 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.dependencies.profile import get_current_profile
+from app.api.deps import SessionDep
 from app.schemas.user_activity import UserActivityPointsBreakdown
 from app.schemas.user_detail import UserDetailsPublic
 from app.schemas.user_follow import PaginatedFollowersResponse
@@ -30,7 +31,9 @@ router = APIRouter(prefix="/users", tags=["users"])
 # Public: Get a profile by username
 @router.get("/@{username}", response_model=UserDetailsPublic)
 def get_public_user_profile_by_username(
-    username: str, user: CurrentUser, db: SessionDep
+    username: str,
+    db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Public profile lookup by username (case-insensitive).
@@ -70,6 +73,7 @@ def search_users(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: SessionDep = None,
+    user=Depends(get_current_profile),
 ):
     if not q:
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
@@ -84,7 +88,10 @@ def search_users(
 
 
 @router.get("/check-username")
-def check_username(username: str, db: SessionDep = None):
+def check_username(
+    username: str,
+    db: SessionDep = None,
+):
     """
     Returns {'available': bool}. Case-insensitive check against user_profile.username.
     """
@@ -108,7 +115,11 @@ def check_username(username: str, db: SessionDep = None):
 
 @router.get("/{user_id}/followers", response_model=PaginatedFollowersResponse)
 def list_followers(
-    user_id: UUID, db: SessionDep = None, limit: int = 20, offset: int = 0
+    user_id: UUID,
+    db: SessionDep = None,
+    limit: int = 20,
+    offset: int = 0,
+    user=Depends(get_current_profile),
 ):
     """
     Returns list of users who follow the given user.
@@ -128,7 +139,11 @@ def list_followers(
 
 @router.get("/{user_id}/following", response_model=PaginatedFollowersResponse)
 def list_following(
-    user_id: UUID, db: SessionDep = None, limit: int = 20, offset: int = 0
+    user_id: UUID,
+    db: SessionDep = None,
+    limit: int = 20,
+    offset: int = 0,
+    user=Depends(get_current_profile),
 ):
     """
     Returns list of users the given user is following.

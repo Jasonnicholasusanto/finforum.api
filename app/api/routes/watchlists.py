@@ -1,8 +1,9 @@
 from typing import List
 import uuid
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.dependencies.profile import get_current_profile
+from app.api.deps import SessionDep
 from app.schemas.watchlist import (
     WatchlistForkOut,
     WatchlistOut,
@@ -26,7 +27,6 @@ from app.schemas.watchlist_share import (
     WatchlistShareOut,
     WatchlistShareUpdate,
 )
-from app.services.user_profile_service import get_user_profile_by_auth
 from app.services.watchlist_service import (
     add_item_to_watchlist,
     add_many_items_to_watchlist,
@@ -61,32 +61,25 @@ router = APIRouter(prefix="/watchlists", tags=["watchlists"])
 
 @router.get("/me")
 def get_my_watchlists(
-    user: CurrentUser,
     db: SessionDep,
     limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0),
+    user=Depends(get_current_profile),
 ):
     """
     Get the current user's watchlists (paginated).
     Optional lazy loading with `limit` and `offset`.
     """
-    # 1. Get user profile
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
 
-    # 2. Fetch user's watchlists (paginated)
+    # 1. Fetch user's watchlists (paginated)
     user_watchlists = get_all_user_related_watchlists(
         session=db,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
         limit=limit,
         offset=offset,
     )
 
-    # 3. Return results
+    # 2. Return results
     return {
         "limit": limit,
         "offset": offset,
@@ -97,8 +90,8 @@ def get_my_watchlists(
 @router.get("/{watchlist_id}/items", response_model=list[WatchlistItemOut])
 def get_watchlist_items_route(
     watchlist_id: int,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Retrieve items in a watchlist.
@@ -108,15 +101,12 @@ def get_watchlist_items_route(
       - The watchlist is shared with them, OR
       - The watchlist is public
     """
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="User profile not found.")
 
     try:
         items = get_watchlist_items_securely(
             session=db,
             watchlist_id=watchlist_id,
-            user_profile_id=profile.id,
+            user_profile_id=user.id,
         )
         return [
             WatchlistItemOut.model_validate(it, from_attributes=True) for it in items
@@ -129,14 +119,13 @@ def get_watchlist_items_route(
         )
 
 
-# Public: Search public watchlists by name (case-insensitive, partial match)
 @router.get("/@{name}", response_model=WatchlistsDetail)
 def get_public_watchlists_by_name(
     name: str,
-    user: CurrentUser,
     db: SessionDep,
     limit: int = Query(20, ge=1, le=50),
     offset: int = Query(0, ge=0),
+    user=Depends(get_current_profile),
 ):
     """
     Search PUBLIC watchlists by name (case-insensitive, partial match).
@@ -174,9 +163,9 @@ def get_public_watchlists_by_name(
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_watchlist(
-    user: CurrentUser,
     db: SessionDep,
     payload: WatchlistDetailCreateRequest,
+    user=Depends(get_current_profile),
 ):
     """
     Create a new watchlist for the authenticated user.
@@ -186,22 +175,14 @@ def create_watchlist(
         watchlist_data = payload.watchlist_data
         items = payload.items
 
-        # 1. Get user profile
-        profile = get_user_profile_by_auth(db, auth_id=user.id)
-        if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User profile not found. Please complete registration.",
-            )
-
-        # 2. Create the new watchlist
+        # 1. Create the new watchlist
         new_watchlist = create_watchlist_for_user(
             db,
-            user_id=profile.id,
+            user_id=user.id,
             watchlist_data=watchlist_data,
         )
 
-        # 3. Add items if provided
+        # 2. Add items if provided
         new_items = []
         if items:
             new_items = add_many_items_to_watchlist(
@@ -210,7 +191,7 @@ def create_watchlist(
                 items=items,
             )
 
-        # 4. Return combined response
+        # 3. Return combined response
         return {
             "message": "Watchlist created successfully.",
             "watchlist": new_watchlist,
@@ -231,22 +212,14 @@ def create_watchlist(
 @router.post("/add-item")
 def add_watchlist_item_to_watchlist(
     item: WatchlistItemCreate,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
-    # 1. Get user profile (not auth user)
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
-    # 2. Add the item
+    # Add the item
     new_item = add_item_to_watchlist(
         session=db,
         item=item,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
     )
     return {"message": "Item added successfully", "item": new_item}
 
@@ -255,22 +228,14 @@ def add_watchlist_item_to_watchlist(
 def add_bulk_watchlist_items_to_watchlist(
     watchlist_id: int,
     items: List[WatchlistItemCreateWithoutId],
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
-    # 1. Get user profile (not auth user)
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
-    # 2. Validate edit permissions
+    # Validate edit permissions
     user_access = user_can_edit_watchlist(
         session=db,
         watchlist_id=watchlist_id,
-        user_id=profile.id,
+        user_id=user.id,
     )
     if not user_access:
         raise HTTPException(
@@ -308,25 +273,17 @@ def add_bulk_watchlist_items_to_watchlist(
 @router.delete("/item/{item_id}", status_code=status.HTTP_200_OK)
 def delete_watchlist_item_from_watchlist(
     item_id: int,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Delete a specific watchlist item if the user has edit access.
     """
-    # 1. Get user profile
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
-    # 2. Perform deletion
+    # Perform deletion
     deleted_item = delete_watchlist_item(
         session=db,
         item_id=item_id,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
     )
 
     if not deleted_item:
@@ -341,26 +298,18 @@ def delete_watchlist_item_from_watchlist(
 @router.delete("/{watchlist_id}", status_code=status.HTTP_200_OK)
 def delete_watchlist_route(
     watchlist_id: int,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Delete a watchlist owned by the authenticated user.
     All related items and shares will be deleted via ON DELETE CASCADE.
     """
-    # 1. Get user profile
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
-    # 2. Delete the watchlist (ownership check inside)
+    # Delete the watchlist (ownership check inside)
     deleted_watchlist = delete_watchlist(
         session=db,
         watchlist_id=watchlist_id,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
     )
 
     if not deleted_watchlist:
@@ -377,27 +326,19 @@ def delete_watchlist_route(
 
 @router.get("/shared/me", response_model=dict)
 def get_shared_watchlists_for_user(
-    user: CurrentUser,
     db: SessionDep,
     limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0),
+    user=Depends(get_current_profile),
 ):
     """
     Get all watchlists that have been shared with the current user.
     Includes edit permissions for each shared watchlist.
     """
-    # 1. Get user profile (not auth user)
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
-    # 2. Get shared watchlists
+    # Get shared watchlists
     shared_watchlists = get_watchlists_shared_with_user(
         session=db,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
         limit=limit,
         offset=offset,
     )
@@ -412,26 +353,18 @@ def get_shared_watchlists_for_user(
 @router.post("/share", response_model=WatchlistShareOut)
 def share_watchlist(
     share_data: WatchlistShareCreate,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Share a watchlist with another user.
     Only the owner of the watchlist can perform this action.
     """
-    # 1. Get owner profile
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
     # 2. Perform the share
     shared = share_watchlist_with_user(
         session=db,
         watchlist_id=share_data.watchlist_id,
-        owner_profile_id=profile.id,
+        owner_profile_id=user.id,
         target_user_id=share_data.user_id,
         can_edit=share_data.can_edit,
     )
@@ -446,26 +379,18 @@ def update_watchlist_share(
     watchlist_id: int,
     target_user_id: uuid.UUID,
     update_data: WatchlistShareUpdate,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Update sharing permissions (can_edit) for a user on a watchlist.
     Only the watchlist owner can perform this action.
     """
-    # 1. Get the current user’s profile
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
-    # 2. Perform update
+    # Perform update
     updated_share = update_watchlist_share_permission(
         session=db,
         watchlist_id=watchlist_id,
-        owner_profile_id=profile.id,
+        owner_profile_id=user.id,
         target_user_id=target_user_id,
         can_edit=update_data.can_edit,
     )
@@ -477,26 +402,18 @@ def update_watchlist_share(
 def update_watchlist(
     watchlist_id: int,
     watchlist_data: WatchlistUpdate,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Update an existing watchlist.
     Only the owner can perform this action.
     """
-    # 1. Get user profile (not auth user)
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
-    # 2. Perform update
+    # Perform update
     updated_watchlist = update_user_watchlist(
         session=db,
         watchlist_id=watchlist_id,
-        owner_profile_id=profile.id,
+        owner_profile_id=user.id,
         update_data=watchlist_data,
     )
 
@@ -507,26 +424,18 @@ def update_watchlist(
 def update_watchlist_item_route(
     item_id: int,
     update_data: WatchlistItemUpdate,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Update an existing item in a watchlist.
     User must own or have edit access to the watchlist.
     """
-    # 1. Get user profile (not auth user)
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found.",
-        )
-
     # 2. Update item via service
     updated_item = update_watchlist_item(
         session=db,
         item_id=item_id,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
         update_data=update_data,
     )
 
@@ -536,20 +445,16 @@ def update_watchlist_item_route(
 @router.post("/{watchlist_id}/bookmark", status_code=status.HTTP_201_CREATED)
 def bookmark_watchlist_route(
     watchlist_id: int,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Bookmark a public watchlist.
     """
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="User profile not found.")
-
     bookmark = bookmark_watchlist(
         session=db,
         watchlist_id=watchlist_id,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
     )
     return {"message": "Watchlist bookmarked successfully.", "bookmark": bookmark}
 
@@ -557,40 +462,32 @@ def bookmark_watchlist_route(
 @router.delete("/{watchlist_id}/bookmark", status_code=status.HTTP_200_OK)
 def unbookmark_watchlist_route(
     watchlist_id: int,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Remove a bookmark for a public watchlist.
     """
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="User profile not found.")
-
     return unbookmark_watchlist(
         session=db,
         watchlist_id=watchlist_id,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
     )
 
 
 @router.get("/bookmarks/me", status_code=status.HTTP_200_OK)
 def list_user_bookmarks_route(
-    user: CurrentUser,
     db: SessionDep,
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    user=Depends(get_current_profile),
 ):
     """
     List all watchlists bookmarked by the current user.
     """
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="User profile not found.")
-
     results = get_user_bookmarked_watchlists(
         session=db,
-        user_profile_id=profile.id,
+        user_profile_id=user.id,
         limit=limit,
         offset=offset,
     )
@@ -600,19 +497,15 @@ def list_user_bookmarks_route(
 @router.post("/{watchlist_id}/fork", response_model=WatchlistForkOut)
 def fork_watchlist_route(
     watchlist_id: int,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Fork (clone) a public watchlist into the current user's account.
     """
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="User profile not found.")
-
     try:
         result = fork_watchlist(
-            session=db, watchlist_id=watchlist_id, user_profile_id=profile.id
+            session=db, watchlist_id=watchlist_id, user_profile_id=user.id
         )
         return result
     except HTTPException:
@@ -626,9 +519,9 @@ def fork_watchlist_route(
 @router.post("/{watchlist_id}/fork/custom", response_model=WatchlistForkOut)
 def fork_watchlist_custom_route(
     watchlist_id: int,
-    user: CurrentUser,
     db: SessionDep,
     payload: WatchlistUpdate | None = None,
+    user=Depends(get_current_profile),
 ):
     """
     Fork (clone) a public watchlist with optional custom details.
@@ -639,17 +532,12 @@ def fork_watchlist_custom_route(
         "description": "Adapted from FinForum Top Tech Picks"
     }
     """
-    # 1. Get current user profile
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="User profile not found.")
-
-    # 2. Execute fork
+    # Execute fork
     try:
         result = fork_watchlist_custom(
             session=db,
             watchlist_id=watchlist_id,
-            user_profile_id=profile.id,
+            user_profile_id=user.id,
             custom_data=payload,
         )
         return result
@@ -664,8 +552,8 @@ def fork_watchlist_custom_route(
 @router.post("/{watchlist_id}/pull", response_model=dict)
 def pull_forked_watchlist_route(
     watchlist_id: int,
-    user: CurrentUser,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Pull (sync) the latest changes from the original watchlist into this fork.
@@ -674,15 +562,11 @@ def pull_forked_watchlist_route(
       - The watchlist was forked from another
       - The original is still PUBLIC
     """
-    profile = get_user_profile_by_auth(db, auth_id=user.id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="User profile not found.")
-
     try:
         result = pull_forked_watchlist(
             session=db,
             watchlist_id=watchlist_id,
-            user_profile_id=profile.id,
+            user_profile_id=user.id,
         )
         return result
     except HTTPException:
@@ -695,11 +579,11 @@ def pull_forked_watchlist_route(
 
 @router.get("/{watchlist_id}/forks", response_model=list[WatchlistOut])
 def get_forked_watchlists(
-    user: CurrentUser,
     watchlist_id: int,
     db: SessionDep,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    user=Depends(get_current_profile),
 ):
     """
     List all forks of a given watchlist.
@@ -716,9 +600,9 @@ def get_forked_watchlists(
 
 @router.get("/{watchlist_id}/lineage", response_model=list[WatchlistOut])
 def get_watchlist_lineage_route(
-    user: CurrentUser,
     watchlist_id: int,
     db: SessionDep,
+    user=Depends(get_current_profile),
 ):
     """
     Return the full lineage of this watchlist (original → current).
@@ -728,9 +612,9 @@ def get_watchlist_lineage_route(
 
 @router.get("/trending", response_model=list[WatchlistOut])
 def get_trending_watchlists(
-    user: CurrentUser,
     db: SessionDep,
     limit: int = Query(10, ge=1, le=50),
+    user=Depends(get_current_profile),
 ):
     """
     Return trending watchlists, ranked by fork count + votes.

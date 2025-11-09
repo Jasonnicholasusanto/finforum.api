@@ -1,8 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 import yfinance as yf
 from fastapi import HTTPException
 
-from app.api.deps import CurrentUser
+from app.api.dependencies.profile import get_current_profile
 from app.schemas.stocks import ScreenTickerInfo
 
 
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/screen", tags=["screener"])
 
 
 @router.get("/predefined-queries")
-async def get_predefined_queries(user: CurrentUser):
+async def get_predefined_queries(user=Depends(get_current_profile)):
     """
     Retrieve a list of predefined screener queries available in yfinance.
     """
@@ -30,7 +30,11 @@ async def get_valid_values():
 
 
 @router.get("/trending/{category}")
-async def get_trending_stocks(user: CurrentUser, category: str, limit: int = 25):
+async def get_trending_stocks(
+    category: str,
+    limit: int = 25,
+    user=Depends(get_current_profile),
+):
     """
     Fetch trending stocks by category using Yahoo Finance screener.
     Categories include: day_gainers, day_losers, most_actives, undervalued_growth_stocks, etc.

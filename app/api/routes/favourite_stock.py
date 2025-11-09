@@ -1,6 +1,8 @@
 from fastapi import APIRouter, status, HTTPException
+from fastapi import Depends
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.dependencies.profile import get_current_profile
+from app.api.deps import SessionDep
 from app.models.favourite_stock import FavouriteStock
 from app.schemas.favourite_stock import FavouriteStockCreate, FavouriteStockUpdate
 from app.services import favourite_stock_service
@@ -15,7 +17,7 @@ router = APIRouter(prefix="/favourite-stocks", tags=["favourite stocks"])
 def add_favourite(
     payload: FavouriteStockCreate,
     db: SessionDep,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
 ):
     profile = get_user_profile_by_auth(db, auth_id=user.id)
     if not profile:
@@ -53,7 +55,7 @@ def add_favourite(
 def remove_favourite(
     id: int,
     db: SessionDep,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
 ):
     profile = get_user_profile_by_auth(db, auth_id=user.id)
     if not profile:
@@ -69,7 +71,7 @@ def update_favourite(
     id: int,
     payload: FavouriteStockUpdate,
     db: SessionDep,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
 ):
     profile = get_user_profile_by_auth(db, auth_id=user.id)
     if not profile:
@@ -83,7 +85,7 @@ def update_favourite(
 @router.get("/", response_model=list[FavouriteStock])
 def list_favourites(
     db: SessionDep,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
 ):
     profile = get_user_profile_by_auth(db, auth_id=user.id)
     if not profile:

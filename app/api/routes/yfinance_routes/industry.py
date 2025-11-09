@@ -1,8 +1,8 @@
 import json
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 import yfinance as yf
 
-from app.api.deps import CurrentUser
+from app.api.dependencies.profile import get_current_profile
 from app.schemas.stocks import TickerInfoResponse
 from app.utils.global_variables import SECTOR_INDUSTRY_MAP
 
@@ -11,7 +11,9 @@ router = APIRouter(prefix="/industry", tags=["industry"])
 
 
 @router.get("/list")
-async def get_sector_industry_list(user: CurrentUser):
+async def get_sector_industry_list(
+    user=Depends(get_current_profile),
+):
     """
     Retrieve a list of market sectors.
     """
@@ -19,7 +21,10 @@ async def get_sector_industry_list(user: CurrentUser):
 
 
 @router.get("/info/{industry}")
-async def get_industry_info(industry: str, user: CurrentUser):
+async def get_industry_info(
+    industry: str,
+    user=Depends(get_current_profile),
+):
     """
     Retrieve summary information for a given sector using Yahoo Finance.
     """
@@ -45,7 +50,9 @@ async def get_industry_info(industry: str, user: CurrentUser):
 
 
 @router.get("/top-companies/{industry}")
-async def get_industry_top_companies(industry: str, user: CurrentUser, limit: int = 25):
+async def get_industry_top_companies(
+    industry: str, user=Depends(get_current_profile), limit: int = 25
+):
     """
     Retrieve top companies in a given industry.
     """

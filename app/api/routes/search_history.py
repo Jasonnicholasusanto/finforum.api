@@ -1,4 +1,3 @@
-# app/api/v1/endpoints/search_history.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from app.api.dependencies.profile import get_current_profile
@@ -14,16 +13,16 @@ router = APIRouter(prefix="/search-history", tags=["Search History"])
 @router.get("/", response_model=List[SearchHistoryRead])
 def get_recent_searches(
     db: SessionDep,
-    profile=Depends(get_current_profile),
+    user=Depends(get_current_profile),
     limit: int = 10,
 ):
-    return search_history_service.list_recent_searches(db, profile.id, limit)
+    return search_history_service.list_recent_searches(db, user.id, limit)
 
 
 @router.post("/", response_model=SearchHistoryRead, status_code=status.HTTP_201_CREATED)
 def create_search_entry(
     db: SessionDep,
-    profile=Depends(get_current_profile),
+    user=Depends(get_current_profile),
     query: str = Query(..., min_length=1),
     type: SearchType = Query(SearchType.GENERAL),
 ):
@@ -34,19 +33,19 @@ def create_search_entry(
     if not query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    entry = search_history_service.add_search_history(db, profile.id, query, type)
+    entry = search_history_service.add_search_history(db, user.id, query, type)
     return entry
 
 
 @router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
 def clear_search_history(
     db: SessionDep,
-    profile=Depends(get_current_profile),
+    user=Depends(get_current_profile),
 ):
     """
     Delete all search history for the current user.
     """
-    deleted_count = search_history_service.clear_search_history(db, profile.id)
+    deleted_count = search_history_service.clear_search_history(db, user.id)
     if deleted_count == 0:
         raise HTTPException(status_code=404, detail="No search history found")
     return None

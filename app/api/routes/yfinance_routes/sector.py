@@ -1,7 +1,7 @@
 import json
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 import yfinance as yf
-from app.api.deps import CurrentUser
+from app.api.dependencies.profile import get_current_profile
 from app.schemas.stocks import TickerInfoResponse
 from app.utils.global_variables import SECTOR_INDUSTRY_MAP
 
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/sector", tags=["sector"])
 
 
 @router.get("/list")
-async def get_sector_list(user: CurrentUser):
+async def get_sector_list(user=Depends(get_current_profile)):
     """
     Retrieve a list of market sectors.
     """
@@ -18,7 +18,7 @@ async def get_sector_list(user: CurrentUser):
 
 
 @router.get("/{sector}/industries")
-async def get_industries_by_sector(sector: str, user: CurrentUser):
+async def get_industries_by_sector(sector: str, user=Depends(get_current_profile)):
     """
     Retrieve a list of industries for a given sector.
     """
@@ -34,7 +34,7 @@ async def get_industries_by_sector(sector: str, user: CurrentUser):
 
 
 @router.get("/info/{sector}")
-async def get_sector_info(sector: str, user: CurrentUser):
+async def get_sector_info(sector: str, user=Depends(get_current_profile)):
     """
     Retrieve summary information for a given sector using Yahoo Finance.
     """
@@ -65,7 +65,9 @@ async def get_sector_info(sector: str, user: CurrentUser):
 
 
 @router.get("/top-companies/{sector}")
-async def get_sector_top_companies(sector: str, user: CurrentUser, limit: int = 25):
+async def get_sector_top_companies(
+    sector: str, user=Depends(get_current_profile), limit: int = 25
+):
     """
     Retrieve top companies in a given sector using Yahoo Finance.
     """
@@ -95,7 +97,9 @@ async def get_sector_top_companies(sector: str, user: CurrentUser, limit: int = 
 
 
 @router.get("/top-etfs/{sector}")
-async def get_sector_top_etfs(sector: str, user: CurrentUser, limit: int = 25):
+async def get_sector_top_etfs(
+    sector: str, user=Depends(get_current_profile), limit: int = 25
+):
     """
     Retrieve top ETFs in a given sector using Yahoo Finance.
     """
@@ -130,7 +134,9 @@ async def get_sector_top_etfs(sector: str, user: CurrentUser, limit: int = 25):
 
 
 @router.get("/top-mutual-funds/{sector}")
-async def get_sector_top_mutual_funds(sector: str, user: CurrentUser, limit: int = 25):
+async def get_sector_top_mutual_funds(
+    sector: str, user=Depends(get_current_profile), limit: int = 25
+):
     """
     Retrieve top mutual funds in a given sector using Yahoo Finance.
     """
