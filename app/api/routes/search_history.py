@@ -49,3 +49,14 @@ def clear_search_history(
     if deleted_count == 0:
         raise HTTPException(status_code=404, detail="No search history found")
     return None
+
+
+@router.get("/types", response_model=List[str])
+def get_search_types(
+    user=Depends(get_current_profile),
+):
+    """
+    Returns the list of available search types (enum values).
+    Useful for frontend dropdowns or validation.
+    """
+    return [e.value for e in SearchType]
