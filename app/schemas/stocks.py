@@ -449,13 +449,9 @@ class SearchResponse(BaseModel):
     exchange: Optional[str] = Field(None, description="Exchange symbol")
     exchDisp: Optional[str] = Field(None, description="Exchange where listed")
     quoteType: Optional[str] = Field(None, description="Type of quote (e.g., EQUITY)")
-    typeDisp: Optional[str] = Field(
-        None, description="Display type of the instrument"
-    )
+    typeDisp: Optional[str] = Field(None, description="Display type of the instrument")
     sector: Optional[str] = Field(None, description="Sector of the company")
-    sectorDisp: Optional[str] = Field(
-        None, description="Display sector of the company"
-    )
+    sectorDisp: Optional[str] = Field(None, description="Display sector of the company")
     industry: Optional[str] = Field(None, description="Industry of the company")
     industryDisp: Optional[str] = Field(
         None, description="Display industry of the company"

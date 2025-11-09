@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from math import log10
 import uuid
 from typing import List, Optional
 

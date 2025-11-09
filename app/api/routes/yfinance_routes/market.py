@@ -1,10 +1,10 @@
 from datetime import datetime, tzinfo
 import json
 from typing import Any
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 import yfinance as yf
 
-from app.api.deps import CurrentUser
+from app.api.dependencies.profile import get_current_profile
 from app.utils.global_variables import MARKETS
 
 
@@ -28,7 +28,7 @@ def safe_json(obj: Any):
 
 
 @router.get("/yf/info/{market_indicator}")
-async def get_market_info(market_indicator: str, user: CurrentUser):
+async def get_market_info(market_indicator: str, user=Depends(get_current_profile)):
     """
     Get the current status of a market (open/closed).
 
@@ -63,7 +63,7 @@ async def get_market_info(market_indicator: str, user: CurrentUser):
 
 
 @router.get("/yf/status/{market_indicator}")
-async def get_market_status(market_indicator: str, user: CurrentUser):
+async def get_market_status(market_indicator: str, user=Depends(get_current_profile)):
     """
     Fetch current market status using Yahoo Finance's Market API.
 

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Query
 import yfinance as yf
 import requests
-from app.api.deps import CurrentUser
+from app.api.dependencies.profile import get_current_profile
 from app.core.config import settings
 from app.schemas.stocks import (
     SearchResponse,
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 
 @router.get("/av/get-ticker-info/{symbol}")
-async def get_alpha_vantage_ticker_data(symbol: str, user: CurrentUser):
+async def get_alpha_vantage_ticker_data(symbol: str, user=Depends(get_current_profile)):
     api_key = settings.ALPHA_VANTAGE_API_KEY
     av_url = settings.ALPHA_VANTAGE_BASE_URL
     url = f"{av_url}?function=OVERVIEW&symbol={symbol}&apikey={api_key}"
@@ -38,7 +38,7 @@ async def get_alpha_vantage_ticker_data(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-info/{symbol}")
-async def get_ticker_info(symbol: str, user: CurrentUser):
+async def get_ticker_info(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         info = TickerInfoResponse(**ticker_data.get_info())
@@ -58,7 +58,7 @@ async def get_ticker_info(symbol: str, user: CurrentUser):
 
 
 @router.post("/get-tickers-info")
-async def get_tickers_info(request: TickersRequest, user: CurrentUser):
+async def get_tickers_info(request: TickersRequest, user=Depends(get_current_profile)):
     try:
         tickers_data = yf.Tickers(" ".join(request.symbols))
         results = {}
@@ -78,7 +78,7 @@ async def get_tickers_info(request: TickersRequest, user: CurrentUser):
 
 
 @router.get("/get-ticker-fast-info/{symbol}")
-async def get_ticker_fast_info(symbol: str, user: CurrentUser):
+async def get_ticker_fast_info(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         fast_info = TickerFastInfoResponse(
@@ -95,7 +95,9 @@ async def get_ticker_fast_info(symbol: str, user: CurrentUser):
 
 
 @router.post("/get-tickers-fast-info")
-async def get_tickers_fast_info(request: TickersRequest, user: CurrentUser):
+async def get_tickers_fast_info(
+    request: TickersRequest, user=Depends(get_current_profile)
+):
     try:
         tickers_data = yf.Tickers(" ".join(request.symbols))
         results = {}
@@ -117,7 +119,7 @@ async def get_tickers_fast_info(request: TickersRequest, user: CurrentUser):
 
 
 @router.get("/get-ticker-major-holders/{symbol}")
-async def get_ticker_major_holders(symbol: str, user: CurrentUser):
+async def get_ticker_major_holders(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         major_holders = ticker_data.major_holders
@@ -134,7 +136,7 @@ async def get_ticker_major_holders(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-earnings/{symbol}")
-async def get_ticker_earnings(symbol: str, user: CurrentUser):
+async def get_ticker_earnings(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         earnings = ticker_data.earnings
@@ -153,7 +155,7 @@ async def get_ticker_earnings(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-earnings-history/{symbol}")
-async def get_ticker_earnings_history(symbol: str, user: CurrentUser):
+async def get_ticker_earnings_history(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         eh = ticker_data.earnings_history
@@ -170,7 +172,7 @@ async def get_ticker_earnings_history(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-earnings-estimate/{symbol}")
-async def get_ticker_earnings_estimates(symbol: str, user: CurrentUser):
+async def get_ticker_earnings_estimates(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         ee = ticker_data.earnings_estimate
@@ -189,7 +191,7 @@ async def get_ticker_earnings_estimates(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-revenue-estimate/{symbol}")
-async def get_ticker_revenue_estimates(symbol: str, user: CurrentUser):
+async def get_ticker_revenue_estimates(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         re = ticker_data.revenue_estimate
@@ -208,7 +210,7 @@ async def get_ticker_revenue_estimates(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-growth-estimates/{symbol}")
-async def get_ticker_growth_estimates(symbol: str, user: CurrentUser):
+async def get_ticker_growth_estimates(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         ge = ticker_data.growth_estimates
@@ -227,7 +229,7 @@ async def get_ticker_growth_estimates(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-dividends/{symbol}")
-async def get_ticker_dividends(symbol: str, user: CurrentUser):
+async def get_ticker_dividends(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         dividends = ticker.dividends
@@ -246,7 +248,7 @@ async def get_ticker_dividends(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-splits/{symbol}")
-async def get_ticker_splits(symbol: str, user: CurrentUser):
+async def get_ticker_splits(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         splits = ticker.splits
@@ -265,7 +267,7 @@ async def get_ticker_splits(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-balance-sheet/{symbol}")
-async def get_balance_sheet(symbol: str, user: CurrentUser):
+async def get_balance_sheet(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         bs = ticker.balance_sheet
@@ -284,7 +286,7 @@ async def get_balance_sheet(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-cashflow/{symbol}")
-async def get_cashflow(symbol: str, user: CurrentUser):
+async def get_cashflow(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         cf = ticker.cashflow
@@ -303,7 +305,7 @@ async def get_cashflow(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-financials/{symbol}")
-async def get_financials(symbol: str, user: CurrentUser):
+async def get_financials(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         fin = ticker.financials
@@ -337,7 +339,7 @@ async def get_sustainability(symbol: str):
 
 
 @router.get("/get-ticker-calendar/{symbol}")
-async def get_calendar(symbol: str, user: CurrentUser):
+async def get_calendar(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         cal = ticker.calendar
@@ -354,7 +356,7 @@ async def get_calendar(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-analyst-price-targets/{symbol}")
-async def get_analyst_price_targets(symbol: str, user: CurrentUser):
+async def get_analyst_price_targets(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         apt = ticker.analyst_price_targets
@@ -376,7 +378,7 @@ async def get_analyst_price_targets(symbol: str, user: CurrentUser):
 @router.get("/lookup-stocks/{query}")
 async def lookup_tickers(
     query: str,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
     count: int = Query(10, description="Number of results to return"),
 ):
     try:
@@ -407,7 +409,7 @@ async def lookup_tickers(
 @router.get("/lookup-all/{query}")
 async def lookup_all(
     query: str,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
     count: int = Query(10, description="Number of results to return"),
 ):
     try:
@@ -438,9 +440,8 @@ async def lookup_all(
 @router.get("/search-quotes/{query}")
 async def search_tickers(
     query: str,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
     max_results: int = Query(10, description="Number of results to return"),
-    
     recommended: int = Query(10, description="Recommended number of results to return"),
     enable_fuzzy_query: bool = Query(True, description="Enable fuzzy search"),
 ):
@@ -460,10 +461,7 @@ async def search_tickers(
         quotes = search.quotes
 
         # Clean up output
-        results = [
-            SearchResponse(**item)
-            for item in quotes
-        ]
+        results = [SearchResponse(**item) for item in quotes]
 
         return {"query": query, "results": results}
 
@@ -473,12 +471,12 @@ async def search_tickers(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-    
+
 
 @router.get("/search-all/{query}")
 async def search_all(
     query: str,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
     max_results: int = Query(10, description="Number of results to return"),
     news_count: int = Query(10, description="Number of news results to return"),
     lists_count: int = Query(10, description="Number of lists results to return"),
@@ -516,7 +514,7 @@ async def search_all(
 
 
 @router.get("/get-ticker-news/{symbol}")
-async def get_ticker_news(symbol: str, user: CurrentUser):
+async def get_ticker_news(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker_data = yf.Ticker(symbol)
         news = ticker_data.news
@@ -534,7 +532,7 @@ async def get_ticker_news(symbol: str, user: CurrentUser):
 
 
 @router.get("/get-ticker-analyst-recommendations/{symbol}")
-async def get_analyst_recommendations(symbol: str, user: CurrentUser):
+async def get_analyst_recommendations(symbol: str, user=Depends(get_current_profile)):
     try:
         ticker = yf.Ticker(symbol)
         recs = ticker.recommendations
@@ -557,7 +555,9 @@ async def get_analyst_recommendations(symbol: str, user: CurrentUser):
 
 
 @router.get("yf/get-ticker-analyst-recommendations-summary/{symbol}")
-async def get_analyst_recommendations_summary(symbol: str, user: CurrentUser):
+async def get_analyst_recommendations_summary(
+    symbol: str, user=Depends(get_current_profile)
+):
     try:
         ticker = yf.Ticker(symbol)
         ars = ticker.recommendations_summary
@@ -585,7 +585,7 @@ async def get_analyst_recommendations_summary(symbol: str, user: CurrentUser):
 )
 async def get_ticker_history(
     symbol: str,
-    user: CurrentUser,
+    user=Depends(get_current_profile),
     interval: str = Query(
         "1d",
         description=f"Valid intervals: {', '.join(list(STOCK_INTERVALS))} (Intraday data cannot extend last 60 days)",
