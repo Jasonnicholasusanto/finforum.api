@@ -4,6 +4,7 @@ import yfinance as yf
 import requests
 from app.api.dependencies.profile import get_current_profile
 from app.core.config import settings
+from app.models.stocks import TickerHistory
 from app.schemas.stocks import (
     SearchResponse,
     TickerFastInfoResponse,
@@ -579,6 +580,52 @@ async def get_analyst_recommendations_summary(
 ### Stock History Data Endpoints
 
 
+@router.get("/get-ticker-history-simple/{symbol}", description="Get historical market data for a given ticker symbol with simple parameters.")
+async def get_ticker_history_simple(
+    symbol: str,
+    user=Depends(get_current_profile),
+    period: str = Query(
+        "1mo",
+        description=f"Valid periods: {', '.join(list(STOCK_PERIODS))}",
+    ),
+    interval: str = Query(
+        "1d",
+        description=f"Valid intervals: {', '.join(list(STOCK_INTERVALS))} (Intraday data cannot extend last 60 days)",
+    ),
+):
+    if interval not in STOCK_INTERVALS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid interval '{interval}'. Must be one of {sorted(list(STOCK_INTERVALS))}",
+        )
+    if period not in STOCK_PERIODS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid period '{period}'. Must be one of {sorted(list(STOCK_PERIODS))}",
+        )
+    try:
+        ticker_data = yf.Ticker(symbol)
+        history = ticker_data.history(interval=interval, period=period)
+
+        if history.empty:
+            return {"symbol": symbol, "history": []}
+
+        history = history.reset_index()
+        records = history.to_dict(orient="records")
+
+        models = [TickerHistory(**row) for row in records]
+        history_list = [m.model_dump(by_alias=True) for m in models]
+
+        return {"symbol": symbol, "history": history_list}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
+        )
+
+
 @router.get(
     "/get-ticker-history/{symbol}",
     description="Get historical market data for a given ticker symbol. Either start/end or period must be provided followed by interval.",
@@ -629,7 +676,10 @@ async def get_ticker_history(
             return {"symbol": symbol, "history": []}
 
         history = history.reset_index()
-        history_list = history.to_dict(orient="records")
+        records = history.to_dict(orient="records")
+
+        models = [TickerHistory(**row) for row in records]
+        history_list = [m.model_dump(by_alias=True) for m in models]
 
         return {"symbol": symbol, "history": history_list}
     except HTTPException:
