@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Literal, Optional
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import AliasChoices, BaseModel, Field, HttpUrl
 
 
 class TickersRequest(BaseModel):
@@ -389,11 +389,15 @@ class ScreenTickerInfo(BaseModel):
 
 
 class TickerHistory(BaseModel):
-    date: datetime = Field(..., alias="Date")
-    open: float = Field(..., alias="Open")
-    high: float = Field(..., alias="High")
-    low: float = Field(..., alias="Low")
-    close: float = Field(..., alias="Close")
-    volume: int = Field(..., alias="Volume")
-    dividends: float = Field(..., alias="Dividends")
-    stock_splits: float = Field(..., alias="Stock Splits")
+    timestamp: datetime = Field(
+        ...,
+        validation_alias=AliasChoices("Date", "Datetime"),
+        serialization_alias="timestamp"
+    )
+    open: float = Field(..., validation_alias="Open", serialization_alias="open")
+    high: float = Field(..., validation_alias="High", serialization_alias="high")
+    low: float = Field(..., validation_alias="Low", serialization_alias="low")
+    close: float = Field(..., validation_alias="Close", serialization_alias="close")
+    volume: int = Field(..., validation_alias="Volume", serialization_alias="volume")
+    dividends: float = Field(..., validation_alias="Dividends", serialization_alias="dividends")
+    stock_splits: float = Field(..., validation_alias="Stock Splits", serialization_alias="stock_splits")
