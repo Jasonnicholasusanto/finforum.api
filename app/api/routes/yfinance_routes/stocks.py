@@ -641,7 +641,7 @@ async def get_ticker_history(
     end: str = Query(None, description="Ends date in YYYY-MM-DD format"),
     period: str | None = Query(
         "1mo",
-        description=f"Alternative to start/end: {', '.join(list(STOCK_INTERVALS))}",
+        description=f"Alternative to start/end: {', '.join(list(STOCK_PERIODS))}",
     ),
 ):
     if interval not in STOCK_INTERVALS:
@@ -674,7 +674,7 @@ async def get_ticker_history(
 
         if history.empty:
             return {"symbol": symbol, "history": []}
-
+        
         history = history.reset_index()
         records = history.to_dict(orient="records")
 
