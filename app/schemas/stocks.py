@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Dict, List, Literal, Optional
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, AliasChoices
 
 
 class TickersRequest(BaseModel):
@@ -154,6 +155,30 @@ class TickerInfoResponse(BaseModel):
     regularMarketDayHigh: Optional[float] = Field(
         None, description="Highest price during regular session"
     )
+    regularMarketChange: Optional[float] = Field(
+        None, description="Regular market price change"
+    )
+    regularMarketChangePercent: Optional[float] = Field(
+        None, description="Regular market change percentage"
+    )
+    regularMarketTime: Optional[int] = Field(
+        None, description="Epoch timestamp for regular market data"
+    )
+    postMarketChangePercent: Optional[float] = Field(
+        None, description="After-hours change percentage"
+    )
+    postMarketPrice: Optional[float] = Field(
+        None, description="After-hours trading price"
+    )
+    postMarketChange: Optional[float] = Field(
+        None, description="After-hours price change"
+    )
+    postMarketTime: Optional[int] = Field(
+        None, description="Epoch timestamp for after-hours data"
+    )
+    marketState: Optional[str] = Field(
+        None, description="Current market state, e.g., REGULAR, PRE, POST, CLOSED"
+    )
 
     # Key financial ratios and metrics
     dividendRate: Optional[float] = Field(
@@ -195,6 +220,9 @@ class TickerInfoResponse(BaseModel):
     averageDailyVolume10Day: Optional[int] = Field(
         None, description="Average daily trading volume (10 days)"
     )
+    numberOfAnalystOpinions: Optional[int] = Field(
+        None, description="Number of analyst opinions"
+    )
 
     # Price and valuation data
     bid: Optional[float] = Field(None, description="Current bid price")
@@ -228,6 +256,9 @@ class TickerInfoResponse(BaseModel):
         description="Floating shares - A float is a measure of the number of shares available for trading by the public. It is calculated by taking the number of issued and outstanding shares minus any restricted stock, which may not be publicly traded.",
     )
     sharesOutstanding: Optional[float] = Field(None, description="Shares outstanding")
+    sharesShort: Optional[float] = Field(
+        None, description="Number of shares sold short"
+    )
     heldPercentInsiders: Optional[float] = Field(
         None, description="Percentage of shares held by insiders"
     )
@@ -241,6 +272,9 @@ class TickerInfoResponse(BaseModel):
     priceToBook: Optional[float] = Field(None, description="Price-to-book ratio")
     lastFiscalYearEnd: Optional[int] = Field(
         None, description="Fiscal year ends (epoch seconds MRQ)"
+    )
+    nextFiscalYearEnd: Optional[int] = Field(
+        None, description="Next fiscal year end (epoch seconds)"
     )
     mostRecentQuarter: Optional[int] = Field(
         None, description="Most recent quarter (epoch seconds MRQ)"
@@ -330,6 +364,7 @@ class TickerInfoResponse(BaseModel):
     language: Optional[str] = Field(
         None, description="Language of the report (e.g., en-US)"
     )
+    region: Optional[str] = Field(None, description="Region (e.g., US, AU)")
     typeDisp: Optional[str] = Field(None, description="Type of security (e.g., Equity)")
     quoteSourceName: Optional[str] = Field(None, description="Quote source name")
     longName: Optional[str] = Field(None, description="Full company name")
@@ -456,3 +491,17 @@ class SearchResponse(BaseModel):
     industryDisp: Optional[str] = Field(
         None, description="Display industry of the company"
     )
+
+class TickerHistory(BaseModel):
+    timestamp: datetime = Field(
+        ...,
+        validation_alias=AliasChoices("Date", "Datetime"),
+        serialization_alias="timestamp"
+    )
+    open: float = Field(..., validation_alias="Open", serialization_alias="open")
+    high: float = Field(..., validation_alias="High", serialization_alias="high")
+    low: float = Field(..., validation_alias="Low", serialization_alias="low")
+    close: float = Field(..., validation_alias="Close", serialization_alias="close")
+    volume: int = Field(..., validation_alias="Volume", serialization_alias="volume")
+    dividends: float = Field(..., validation_alias="Dividends", serialization_alias="dividends")
+    stock_splits: float = Field(..., validation_alias="Stock Splits", serialization_alias="stock_splits")
