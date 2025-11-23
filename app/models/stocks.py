@@ -208,6 +208,9 @@ class TickerInfoResponse(BaseModel):
     quoteType: Optional[str] = Field(
         None, description="Type of instrument, e.g., EQUITY, ETF, INDEX"
     )
+    hasPrePostMarketData: Optional[bool] = Field(
+        None, description="Indicates if pre/post market data is available"
+    )
     market: Optional[str] = Field(None, description="Market identifier")
     marketCap: Optional[float] = Field(None, description="Market capitalization")
     sharesOutstanding: Optional[int] = Field(
@@ -276,6 +279,21 @@ class TickerInfoResponse(BaseModel):
     )
     regularMarketDayHigh: Optional[float] = Field(
         None, description="Regular market day high"
+    )
+    regularMarketChange: Optional[float] = Field(
+        None, description="Regular market price change"
+    )
+    regularMarketChangePercent: Optional[float] = Field(
+        None, description="Regular market change percentage"
+    ) 
+    postMarketChangePercent: Optional[float] = Field(
+        None, description="After-hours change percentage"
+    )
+    postMarketPrice: Optional[float] = Field(
+        None, description="After-hours trading price"
+    )
+    postMarketChange: Optional[float] = Field(
+        None, description="After-hours price change"
     )
 
     # Earnings & valuation
