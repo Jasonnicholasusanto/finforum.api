@@ -59,20 +59,6 @@ async def get_ticker_info(symbol: str, user=Depends(get_current_profile)):
         )
 
 
-@router.get("/get-ticker-info-test/{symbol}")
-async def get_ticker_info_test(symbol: str, user=Depends(get_current_profile)):
-    try:
-        ticker_data = yf.Ticker(symbol)
-        return ticker_data.get_info()
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch fast info for '{symbol}': {str(e)}",
-        )
-
-
 @router.post("/get-tickers-info")
 async def get_tickers_info(request: TickersRequest, user=Depends(get_current_profile)):
     try:
