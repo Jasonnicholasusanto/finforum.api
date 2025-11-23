@@ -4,10 +4,10 @@ import yfinance as yf
 import requests
 from app.api.dependencies.profile import get_current_profile
 from app.core.config import settings
-from app.models.stocks import TickerHistory
 from app.schemas.stocks import (
     SearchResponse,
     TickerFastInfoResponse,
+    TickerHistory,
     TickerInfoResponse,
     TickersRequest,
 )
@@ -581,7 +581,10 @@ async def get_analyst_recommendations_summary(
 ### Stock History Data Endpoints
 
 
-@router.get("/get-ticker-history-simple/{symbol}", description="Get historical market data for a given ticker symbol with simple parameters.")
+@router.get(
+    "/get-ticker-history-simple/{symbol}",
+    description="Get historical market data for a given ticker symbol with simple parameters.",
+)
 async def get_ticker_history_simple(
     symbol: str,
     user=Depends(get_current_profile),
@@ -671,9 +674,13 @@ async def get_ticker_history(
             inc_prepost = False
 
         if start and end and interval:
-            history = ticker_data.history(interval=interval, start=start, end=end, prepost=inc_prepost)
+            history = ticker_data.history(
+                interval=interval, start=start, end=end, prepost=inc_prepost
+            )
         elif period and interval:
-            history = ticker_data.history(interval=interval, period=period, prepost=inc_prepost)
+            history = ticker_data.history(
+                interval=interval, period=period, prepost=inc_prepost
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -687,7 +694,7 @@ async def get_ticker_history(
         fast_info = TickerFastInfoResponse(
             symbol=symbol.upper(), **ticker_data.fast_info
         )
-        
+
         history = history.reset_index()
         records = history.to_dict(orient="records")
 
@@ -697,15 +704,23 @@ async def get_ticker_history(
         history_list = [m.model_dump(by_alias=True) for m in models]
 
         if is_intraday:
-            period_change, period_percent = get_regular_market_change(last_price=fast_info.lastPrice, is_intraday=is_intraday, prev_close=fast_info.regularMarketPreviousClose)
+            period_change, period_percent = get_regular_market_change(
+                last_price=fast_info.lastPrice,
+                is_intraday=is_intraday,
+                prev_close=fast_info.regularMarketPreviousClose,
+            )
         else:
-            period_change, period_percent = get_regular_market_change(last_price=fast_info.lastPrice, is_intraday=is_intraday, prev_close=models[0].close)
+            period_change, period_percent = get_regular_market_change(
+                last_price=fast_info.lastPrice,
+                is_intraday=is_intraday,
+                prev_close=models[0].close,
+            )
 
         return {
-            "symbol": symbol, 
-            "change": period_change, 
-            "change_percentage": period_percent, 
-            "history": history_list
+            "symbol": symbol,
+            "change": period_change,
+            "change_percentage": period_percent,
+            "history": history_list,
         }
     except HTTPException:
         raise
