@@ -164,6 +164,18 @@ class TickerInfoResponse(BaseModel):
     regularMarketTime: Optional[int] = Field(
         None, description="Epoch timestamp for regular market data"
     )
+    preMarketChangePercent: Optional[float] = Field(
+        None, description="Pre-market change percentage"
+    )
+    preMarketPrice: Optional[float] = Field(
+        None, description="Pre-market trading price"
+    )
+    preMarketChange: Optional[float] = Field(
+        None, description="Pre-market price change"
+    )
+    preMarketTime: Optional[int] = Field(
+        None, description="Epoch timestamp for pre-market data"
+    )
     postMarketChangePercent: Optional[float] = Field(
         None, description="After-hours change percentage"
     )
