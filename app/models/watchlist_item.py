@@ -35,6 +35,8 @@ class WatchlistItem(SQLModel, table=True):
     exchange: str = Field(index=True)
     note: Optional[str] = None
     position: Optional[int] = None
+    percentage: Optional[float] = None
+    quantity: Optional[int] = None
 
     created_at: datetime = Field(
         sa_column=Column(
