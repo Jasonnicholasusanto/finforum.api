@@ -9,6 +9,7 @@ from app.schemas.watchlist import (
     WatchlistOut,
     WatchlistPublicOut,
     WatchlistUpdate,
+    WatchlistVisibility,
 )
 from app.schemas.watchlist_detail import (
     WatchlistDetail,
@@ -57,6 +58,14 @@ from app.services.watchlist_service import (
 
 
 router = APIRouter(prefix="/watchlists", tags=["watchlists"])
+
+
+@router.get("/types", response_model=list[str])
+def get_watchlist_visibility_types():
+    """
+    Get all possible watchlist visibility types.
+    """
+    return [vt.value for vt in WatchlistVisibility]
 
 
 @router.get("/me")
