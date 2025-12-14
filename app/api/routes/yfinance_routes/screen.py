@@ -72,11 +72,9 @@ async def get_trending_stocks(
 
 @router.post("/custom-equity-query")
 async def run_equity_query(request: ScreenerRequest, user=Depends(get_current_profile)):
-    # valid_fields, valid_values = load_valid_fields()
-
-    # Flatten fields for validation
-    # all_valid_fields = set().union(*valid_fields.values())
-    # print(all_valid_fields)
+    """
+    Run a custom equity query based on user-defined conditions.
+    """
 
     if request.logical_operator.lower() not in SCREENER_LOGICAL_OPERATORS.values():
         raise HTTPException(
@@ -89,17 +87,13 @@ async def run_equity_query(request: ScreenerRequest, user=Depends(get_current_pr
                 status_code=400,
                 detail=f"Invalid operator: {i.operator}",
             )
-        
+
     # Build query
     query = build_equity_query(request.conditions, request.logical_operator)
 
     # Run query
-    results = yf.screen(query, size=request.limit, sortField = request.sort_field, sortAsc = True)
+    results = yf.screen(
+        query, size=request.limit, sortField=request.sort_field, sortAsc=True
+    )
 
-
-    return {
-        "query": request,
-        "results": results.get("quotes", [])
-    }
-
-    
+    return {"query": request, "results": results.get("quotes", [])}
