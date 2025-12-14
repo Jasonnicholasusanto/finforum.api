@@ -3,7 +3,10 @@ import yfinance as yf
 from fastapi import HTTPException
 
 from app.api.dependencies.profile import get_current_profile
+from app.schemas.screener import ScreenerRequest
 from app.schemas.stocks import ScreenTickerInfo
+from app.utils.global_variables import SCREENER_LOGICAL_OPERATORS
+from app.utils.screener import build_equity_query, load_valid_fields
 
 
 router = APIRouter(prefix="/screen", tags=["screener"])
@@ -19,6 +22,19 @@ async def get_predefined_queries(user=Depends(get_current_profile)):
     psq_dict = {key.replace("_", " ").title(): key for key in psq_list}
 
     return {"predefined_queries_list": psq_dict, "predefined_queries": psq}
+
+
+@router.get("/equity-valid-fields")
+async def get_equity_screener_valid_fields(user=Depends(get_current_profile)):
+    """
+    Retrieve a list of valid fields and valid values for the EquityQuery API.
+    """
+    valid_fields, valid_values = load_valid_fields()
+
+    return {
+        "equity_screener_valid_fields": valid_fields,
+        "equity_screener_valid_values": valid_values,
+    }
 
 
 @router.get("/trending/{category}")
@@ -52,3 +68,38 @@ async def get_trending_stocks(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {str(e)}")
+
+
+@router.post("/custom-equity-query")
+async def run_equity_query(request: ScreenerRequest, user=Depends(get_current_profile)):
+    # valid_fields, valid_values = load_valid_fields()
+
+    # Flatten fields for validation
+    # all_valid_fields = set().union(*valid_fields.values())
+    # print(all_valid_fields)
+
+    if request.logical_operator.lower() not in SCREENER_LOGICAL_OPERATORS.values():
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid logical operator. Must be 'and' or 'or'.",
+        )
+    for i in request.conditions:
+        if i.operator.lower() not in SCREENER_LOGICAL_OPERATORS.values():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid operator: {i.operator}",
+            )
+        
+    # Build query
+    query = build_equity_query(request.conditions, request.logical_operator)
+
+    # Run query
+    results = yf.screen(query, size=request.limit, sortField = request.sort_field, sortAsc = True)
+
+
+    return {
+        "query": request,
+        "results": results.get("quotes", [])
+    }
+
+    
