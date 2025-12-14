@@ -24,7 +24,7 @@ async def get_predefined_queries(user=Depends(get_current_profile)):
     return {"predefined_queries_list": psq_dict, "predefined_queries": psq}
 
 
-@router.get("/equity-valid-fields")
+@router.get("/equity-valid-inputs")
 async def get_equity_screener_valid_fields(user=Depends(get_current_profile)):
     """
     Retrieve a list of valid fields and valid values for the EquityQuery API.
@@ -37,8 +37,8 @@ async def get_equity_screener_valid_fields(user=Depends(get_current_profile)):
     }
 
 
-@router.get("/trending/{category}")
-async def get_trending_stocks(
+@router.get("/predefined-queries-result/{category}")
+async def get_results_by_pre_defined_queries(
     category: str,
     limit: int = 25,
     user=Depends(get_current_profile),
@@ -70,13 +70,13 @@ async def get_trending_stocks(
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {str(e)}")
 
 
-@router.post("/custom-equity-query")
+@router.post("/custom-equity-query-results")
 async def custom_equity_query(request: ScreenerRequest, user=Depends(get_current_profile)):
     """
     Run a custom equity query based on user-defined conditions.
     """
 
-    if request.logical_operator.lower() not in SCREENER_LOGICAL_OPERATORS.values():
+    if request.logical_operator.lower() not in {"and", "or"}:
         raise HTTPException(
             status_code=400,
             detail="Invalid logical operator. Must be 'and' or 'or'.",
@@ -96,4 +96,6 @@ async def custom_equity_query(request: ScreenerRequest, user=Depends(get_current
         query, size=request.limit, sortField=request.sort_field, sortAsc=True
     )
 
-    return {"query": request, "results": results.get("quotes", [])}
+    quotes = results.get("quotes", [])
+
+    return {"query": request, "results": [ScreenTickerInfo(**quote) for quote in quotes]}

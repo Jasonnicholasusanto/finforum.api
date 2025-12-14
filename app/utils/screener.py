@@ -12,9 +12,18 @@ def load_valid_fields():
 
 
 def build_equity_query(conditions, logical_operator):
-    subqueries = []
-    for cond in conditions:
-        q = yf.EquityQuery(cond.operator.lower(), [cond.field, cond.value])
-        subqueries.append(q)
+    subqueries = [
+        yf.EquityQuery(cond.operator.lower(), [cond.field, cond.value])
+        for cond in conditions
+    ]
+
+    # If only 1 condition → return the condition directly (no AND/OR wrapper)
+    if len(subqueries) == 1:
+        return subqueries[0]
+
+    # Otherwise wrap in AND / OR
+    if logical_operator.lower() not in ("and", "or"):
+        raise ValueError("logical_operator must be 'and' or 'or'")
 
     return yf.EquityQuery(logical_operator.lower(), subqueries)
+
