@@ -71,7 +71,7 @@ async def get_trending_stocks(
 
 
 @router.post("/custom-equity-query")
-async def run_equity_query(request: ScreenerRequest, user=Depends(get_current_profile)):
+async def custom_equity_query(request: ScreenerRequest, user=Depends(get_current_profile)):
     """
     Run a custom equity query based on user-defined conditions.
     """
