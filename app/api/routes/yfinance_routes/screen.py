@@ -91,6 +91,8 @@ async def custom_equity_query(request: ScreenerRequest, user=Depends(get_current
     # Build query
     query = build_equity_query(request.conditions, request.logical_operator)
 
+    print(query)
+
     # Run query
     results = yf.screen(
         query, size=request.limit, sortField=request.sort_field, sortAsc=True
