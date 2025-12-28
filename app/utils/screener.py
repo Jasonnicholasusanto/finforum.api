@@ -27,10 +27,7 @@ def build_equity_query(conditions, logical_operator):
         if op == "is-in":
             if not isinstance(cond.value, list):
                 raise ValueError("is-in operator expects a list value")
-            isin_queries = [
-                yf.EquityQuery(op, [cond.field, v])
-                for v in cond.value
-            ]
+            isin_queries = [yf.EquityQuery(op, [cond.field, v]) for v in cond.value]
             if len(isin_queries) == 1:
                 subqueries.append(isin_queries[0])
             else:
@@ -42,9 +39,7 @@ def build_equity_query(conditions, logical_operator):
                 yf.EquityQuery(op, [cond.field, cond.value[0], cond.value[1]])
             )
         else:
-            subqueries.append(
-                yf.EquityQuery(op, [cond.field, cond.value])
-            )
+            subqueries.append(yf.EquityQuery(op, [cond.field, cond.value]))
 
     if len(subqueries) == 1:
         return subqueries[0]
@@ -64,10 +59,7 @@ def build_fund_query(conditions, logical_operator):
         if op == "is-in":
             if not isinstance(cond.value, list):
                 raise ValueError("is-in operator expects a list value")
-            isin_queries = [
-                yf.FundQuery(op, [cond.field, v])
-                for v in cond.value
-            ]
+            isin_queries = [yf.FundQuery(op, [cond.field, v]) for v in cond.value]
             if len(isin_queries) == 1:
                 subqueries.append(isin_queries[0])
             else:
@@ -79,9 +71,7 @@ def build_fund_query(conditions, logical_operator):
                 yf.FundQuery(op, [cond.field, cond.value[0], cond.value[1]])
             )
         else:
-            subqueries.append(
-                yf.FundQuery(op, [cond.field, cond.value])
-            )
+            subqueries.append(yf.FundQuery(op, [cond.field, cond.value]))
 
     if len(subqueries) == 1:
         return subqueries[0]

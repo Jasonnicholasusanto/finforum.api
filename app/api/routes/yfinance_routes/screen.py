@@ -6,7 +6,12 @@ from app.api.dependencies.profile import get_current_profile
 from app.schemas.screener import ScreenerRequest
 from app.schemas.stocks import ScreenTickerInfo
 from app.utils.global_variables import SCREENER_LOGICAL_OPERATORS
-from app.utils.screener import build_equity_query, build_fund_query, load_valid_equity_attributes, load_valid_fund_attributes
+from app.utils.screener import (
+    build_equity_query,
+    build_fund_query,
+    load_valid_equity_attributes,
+    load_valid_fund_attributes,
+)
 
 
 router = APIRouter(prefix="/screen", tags=["screener"])
@@ -84,7 +89,9 @@ async def get_results_by_pre_defined_queries(
 
 
 @router.post("/custom-equity-query-results")
-async def custom_equity_query(request: ScreenerRequest, user=Depends(get_current_profile)):
+async def custom_equity_query(
+    request: ScreenerRequest, user=Depends(get_current_profile)
+):
     """
     Run a custom equity query based on user-defined conditions.
     """
@@ -111,10 +118,16 @@ async def custom_equity_query(request: ScreenerRequest, user=Depends(get_current
 
     quotes = results.get("quotes", [])
 
-    return {"query": request, "results": [ScreenTickerInfo(**quote) for quote in quotes]}
+    return {
+        "query": request,
+        "results": [ScreenTickerInfo(**quote) for quote in quotes],
+    }
+
 
 @router.post("/custom-fund-query-results")
-async def custom_fund_query(request: ScreenerRequest, user=Depends(get_current_profile)):
+async def custom_fund_query(
+    request: ScreenerRequest, user=Depends(get_current_profile)
+):
     """
     Run a custom fund query based on user-defined conditions.
     """
@@ -141,4 +154,7 @@ async def custom_fund_query(request: ScreenerRequest, user=Depends(get_current_p
 
     quotes = results.get("quotes", [])
 
-    return {"query": request, "results": [ScreenTickerInfo(**quote) for quote in quotes]}
+    return {
+        "query": request,
+        "results": [ScreenTickerInfo(**quote) for quote in quotes],
+    }
