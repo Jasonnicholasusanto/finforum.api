@@ -504,16 +504,21 @@ class SearchResponse(BaseModel):
         None, description="Display industry of the company"
     )
 
+
 class TickerHistory(BaseModel):
     timestamp: datetime = Field(
         ...,
         validation_alias=AliasChoices("Date", "Datetime"),
-        serialization_alias="timestamp"
+        serialization_alias="timestamp",
     )
     open: float = Field(..., validation_alias="Open", serialization_alias="open")
     high: float = Field(..., validation_alias="High", serialization_alias="high")
     low: float = Field(..., validation_alias="Low", serialization_alias="low")
     close: float = Field(..., validation_alias="Close", serialization_alias="close")
     volume: int = Field(..., validation_alias="Volume", serialization_alias="volume")
-    dividends: float = Field(..., validation_alias="Dividends", serialization_alias="dividends")
-    stock_splits: float = Field(..., validation_alias="Stock Splits", serialization_alias="stock_splits")
+    dividends: float = Field(
+        ..., validation_alias="Dividends", serialization_alias="dividends"
+    )
+    stock_splits: float = Field(
+        ..., validation_alias="Stock Splits", serialization_alias="stock_splits"
+    )

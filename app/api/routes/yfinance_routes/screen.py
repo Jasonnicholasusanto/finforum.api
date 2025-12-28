@@ -3,7 +3,15 @@ import yfinance as yf
 from fastapi import HTTPException
 
 from app.api.dependencies.profile import get_current_profile
+from app.schemas.screener import ScreenerRequest
 from app.schemas.stocks import ScreenTickerInfo
+from app.utils.global_variables import SCREENER_LOGICAL_OPERATORS
+from app.utils.screener import (
+    build_equity_query,
+    build_fund_query,
+    load_valid_equity_attributes,
+    load_valid_fund_attributes,
+)
 
 
 router = APIRouter(prefix="/screen", tags=["screener"])
@@ -21,8 +29,34 @@ async def get_predefined_queries(user=Depends(get_current_profile)):
     return {"predefined_queries_list": psq_dict, "predefined_queries": psq}
 
 
-@router.get("/trending/{category}")
-async def get_trending_stocks(
+@router.get("/equity-valid-inputs")
+async def get_equity_screener_valid_fields(user=Depends(get_current_profile)):
+    """
+    Retrieve a list of valid fields and valid values for the EquityQuery API.
+    """
+    valid_fields, valid_values = load_valid_equity_attributes()
+
+    return {
+        "equity_screener_valid_fields": valid_fields,
+        "equity_screener_valid_values": valid_values,
+    }
+
+
+@router.get("/fund-valid-inputs")
+async def get_fund_screener_valid_fields(user=Depends(get_current_profile)):
+    """
+    Retrieve a list of valid fields and valid values for the FundQuery API.
+    """
+    valid_fields, valid_values = load_valid_fund_attributes()
+
+    return {
+        "fund_screener_valid_fields": valid_fields,
+        "fund_screener_valid_values": valid_values,
+    }
+
+
+@router.get("/predefined-queries-result/{category}")
+async def get_results_by_pre_defined_queries(
     category: str,
     limit: int = 25,
     user=Depends(get_current_profile),
@@ -52,3 +86,75 @@ async def get_trending_stocks(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {str(e)}")
+
+
+@router.post("/custom-equity-query-results")
+async def custom_equity_query(
+    request: ScreenerRequest, user=Depends(get_current_profile)
+):
+    """
+    Run a custom equity query based on user-defined conditions.
+    """
+
+    if request.logical_operator.lower() not in {"and", "or"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid logical operator. Must be 'and' or 'or'.",
+        )
+    for i in request.conditions:
+        if i.operator.lower() not in SCREENER_LOGICAL_OPERATORS.values():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid operator: {i.operator}",
+            )
+
+    # Build query
+    query = build_equity_query(request.conditions, request.logical_operator)
+
+    # Run query
+    results = yf.screen(
+        query, size=request.limit, sortField=request.sort_field, sortAsc=True
+    )
+
+    quotes = results.get("quotes", [])
+
+    return {
+        "query": request,
+        "results": [ScreenTickerInfo(**quote) for quote in quotes],
+    }
+
+
+@router.post("/custom-fund-query-results")
+async def custom_fund_query(
+    request: ScreenerRequest, user=Depends(get_current_profile)
+):
+    """
+    Run a custom fund query based on user-defined conditions.
+    """
+
+    if request.logical_operator.lower() not in {"and", "or"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid logical operator. Must be 'and' or 'or'.",
+        )
+    for i in request.conditions:
+        if i.operator.lower() not in SCREENER_LOGICAL_OPERATORS.values():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid operator: {i.operator}",
+            )
+
+    # Build query
+    query = build_fund_query(request.conditions, request.logical_operator)
+
+    # Run query
+    results = yf.screen(
+        query, size=request.limit, sortField=request.sort_field, sortAsc=True
+    )
+
+    quotes = results.get("quotes", [])
+
+    return {
+        "query": request,
+        "results": [ScreenTickerInfo(**quote) for quote in quotes],
+    }

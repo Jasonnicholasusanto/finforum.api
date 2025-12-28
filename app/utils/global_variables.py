@@ -457,3 +457,15 @@ SECTOR_INDUSTRY_MAP = {
         "utilities-renewable",
     ],
 }
+
+SCREENER_LOGICAL_OPERATORS = {
+    "Equals": "eq",
+    "And": "and",
+    "Or": "or",
+    "Is in": "is-in",
+    "Between": "btwm",
+    "Greater than": "gt",
+    "Less than": "lt",
+    "Greater than or equal to": "gte",
+    "Less than or equal to": "lte",
+}
