@@ -1,3 +1,4 @@
+from typing import Literal
 from fastapi import APIRouter, Depends
 import yfinance as yf
 from fastapi import HTTPException
@@ -5,7 +6,7 @@ from fastapi import HTTPException
 from app.api.dependencies.profile import get_current_profile
 from app.schemas.screener import ScreenerRequest
 from app.schemas.stocks import ScreenTickerInfo
-from app.utils.global_variables import SCREENER_LOGICAL_OPERATORS
+from app.utils.global_variables import CURATED_EQUITY_SCREENERS, CURATED_FUND_SCREENERS, SCREENER_LOGICAL_OPERATORS
 from app.utils.screener import (
     build_equity_query,
     build_fund_query,
@@ -53,6 +54,57 @@ async def get_fund_screener_valid_fields(user=Depends(get_current_profile)):
         "fund_screener_valid_fields": valid_fields,
         "fund_screener_valid_values": valid_values,
     }
+
+@router.get("/curated")
+async def get_curated_screen(
+    asset_type: str = Literal["equity", "fund"],
+    limit: int = 10,
+    user=Depends(get_current_profile),
+):
+    """
+    Finforum-curated screeners for equities & funds.
+    """
+
+    asset_type = asset_type.lower()
+
+    if asset_type == "equity":
+        screener = CURATED_EQUITY_SCREENERS.get("popular")
+    elif asset_type == "fund":
+        screener = CURATED_FUND_SCREENERS.get("popular")
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="asset_type must be 'equity' or 'fund'",
+        )
+
+    if not screener:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid category. Valid options: popular, trending, quality",
+        )
+
+    try:
+        data = yf.screen(
+            screener["query"],
+            size=limit,
+            sortField=screener["sort_field"],
+            sortAsc=screener["sort_asc"],
+        )
+
+        quotes = data.get("quotes", [])
+
+        return {
+            "asset_type": asset_type,
+            "category": "popular",
+            "count": len(quotes),
+            "results": [ScreenTickerInfo(**q) for q in quotes],
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch curated screener: {str(e)}",
+        )
 
 
 @router.get("/predefined-queries-result/{category}")

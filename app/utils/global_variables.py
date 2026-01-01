@@ -1,5 +1,7 @@
 from typing import Literal
 
+from yfinance import EquityQuery, FundQuery
+
 
 MAX_PROFILE_PICTURE_FILE_SIZE_KB = 300
 
@@ -468,4 +470,49 @@ SCREENER_LOGICAL_OPERATORS = {
     "Less than": "lt",
     "Greater than or equal to": "gte",
     "Less than or equal to": "lte",
+}
+
+CURATED_EQUITY_SCREENERS = {
+    "popular": {
+        "sort_field": "dayvolume",
+        "sort_asc": False,
+        "query": EquityQuery(
+            "and",
+            [
+                EquityQuery("gte", ["intradaymarketcap", 2000000000]),
+                EquityQuery("gt", ["dayvolume", 5000000]),
+                EquityQuery("gte", ["intradayprice", 5]),
+                EquityQuery("gte", ["intradaypricechange", 0]),
+                EquityQuery("is-in", ["region", "us", "au"]),
+            ],
+        ),
+    },
+    "trending": {
+        "sort_field": "percentchange",
+        "sort_asc": False,
+        "query": EquityQuery(
+            "and",
+            [
+                EquityQuery("gte", ["intradaymarketcap", 2000000000]),
+                EquityQuery("gt", ["percentchange", 2]),
+                EquityQuery("is-in", ["region", "us", "au"]),
+            ],
+        ),
+    }
+}
+
+CURATED_FUND_SCREENERS = {
+    "popular": {
+        "sort_field": "fundnetassets",
+        "sort_asc": False,
+        "query": FundQuery(
+            "and",
+            [
+                FundQuery("is-in", ["performanceratingoverall", 4, 5]),
+                FundQuery("lte", ["initialinvestment", 100000]),
+                FundQuery("is-in", ["exchange", "NAS"]),
+                FundQuery("eq", ["categoryname", "Large Growth"]),
+            ],
+        ),
+    },
 }
