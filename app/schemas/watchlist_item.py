@@ -12,8 +12,10 @@ class WatchlistItemBase(BaseModel):
     exchange: str = Field(min_length=1)
     note: Optional[str] = Field(default=None, max_length=1000)
     position: Optional[int] = Field(default=None, ge=0)
+    purchase_price: Optional[float] = Field(default=None, ge=0.0)
     percentage: Optional[float] = Field(default=None, ge=0.0, le=100.0)
     quantity: Optional[float] = Field(default=None, ge=0.0)
+    purchase_price: Optional[float] = Field(default=None, ge=0.0)
 
 
 class WatchlistItemCreate(WatchlistItemBase):
@@ -33,6 +35,7 @@ class WatchlistItemUpdate(BaseModel):
     position: Optional[int] = Field(default=None, ge=0)
     percentage: Optional[float] = Field(default=None, ge=0.0, le=100.0)
     quantity: Optional[float] = Field(default=None, ge=0.0)
+    purchase_price: Optional[float] = Field(default=None, ge=0.0)
 
 
 class WatchlistItemOut(WatchlistItemBase):
