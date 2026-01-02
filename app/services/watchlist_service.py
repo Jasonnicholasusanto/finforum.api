@@ -1048,7 +1048,7 @@ def validate_watchlist_allocation(
                     f"Invalid item {item.symbol}: percentage must be provided when "
                     f"watchlist allocation_type is 'percentage'."
                 )
-            
+
     elif allocation_type is None:
         for item in items:
             if item.percentage is not None or item.quantity is not None:
@@ -1071,6 +1071,4 @@ def validate_watchlist_allocation(
                 )
 
     else:
-        raise ValueError(
-            f"Unknown allocation_type: {allocation_type}"
-        )
+        raise ValueError(f"Unknown allocation_type: {allocation_type}")

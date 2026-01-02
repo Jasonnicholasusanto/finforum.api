@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.dependencies.profile import get_current_profile
 from app.api.deps import SessionDep
 from app.schemas.watchlist import (
+    StockAllocationType,
     WatchlistForkOut,
     WatchlistOut,
     WatchlistPublicOut,
@@ -67,6 +68,15 @@ def get_watchlist_visibility_types():
     Get all possible watchlist visibility types.
     """
     return [vt.value for vt in WatchlistVisibility]
+
+
+@router.get("/allocation-types", response_model=list[str])
+def get_watchlist_allocation_types():
+    """
+    Get all possible watchlist stock allocation types.
+    """
+
+    return [at.value for at in StockAllocationType]
 
 
 @router.get("/me")

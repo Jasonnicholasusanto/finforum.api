@@ -16,6 +16,7 @@ class WatchlistVisibility(str, Enum):
     PUBLIC = "public"
     SHARED = "shared"
 
+
 class StockAllocationType(str, Enum):
     PERCENTAGE = "percentage"
     UNIT = "unit"

@@ -6,7 +6,11 @@ from fastapi import HTTPException
 from app.api.dependencies.profile import get_current_profile
 from app.schemas.screener import ScreenerRequest
 from app.schemas.stocks import ScreenTickerInfo
-from app.utils.global_variables import CURATED_EQUITY_SCREENERS, CURATED_FUND_SCREENERS, SCREENER_LOGICAL_OPERATORS
+from app.utils.global_variables import (
+    CURATED_EQUITY_SCREENERS,
+    CURATED_FUND_SCREENERS,
+    SCREENER_LOGICAL_OPERATORS,
+)
 from app.utils.screener import (
     build_equity_query,
     build_fund_query,
@@ -54,6 +58,7 @@ async def get_fund_screener_valid_fields(user=Depends(get_current_profile)):
         "fund_screener_valid_fields": valid_fields,
         "fund_screener_valid_values": valid_values,
     }
+
 
 @router.get("/curated")
 async def get_curated_screen(
