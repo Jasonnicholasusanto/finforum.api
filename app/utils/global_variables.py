@@ -498,7 +498,7 @@ CURATED_EQUITY_SCREENERS = {
                 EquityQuery("is-in", ["region", "us", "au"]),
             ],
         ),
-    }
+    },
 }
 
 CURATED_FUND_SCREENERS = {
