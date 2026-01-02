@@ -1021,3 +1021,56 @@ def get_watchlist_lineage(session: Session, *, watchlist_id: int) -> list[Watchl
 
     lineage.reverse()  # show from oldest → newest
     return [WatchlistOut.model_validate(w, from_attributes=True) for w in lineage]
+
+
+def validate_watchlist_allocation(
+    watchlist_data: WatchlistCreate,
+    items: List[WatchlistItemCreateWithoutId] | None,
+) -> None:
+    """
+    Enforces allocation_type consistency between watchlist and items.
+    Raises ValueError on invalid combinations.
+    """
+    if not items:
+        return  # no items, nothing to validate
+
+    allocation_type = watchlist_data.allocation_type
+
+    if allocation_type == "percentage":
+        for item in items:
+            if item.quantity is not None:
+                raise ValueError(
+                    f"Invalid item {item.symbol}: quantity is not allowed when "
+                    f"watchlist allocation_type is 'percentage'."
+                )
+            if item.percentage is None:
+                raise ValueError(
+                    f"Invalid item {item.symbol}: percentage must be provided when "
+                    f"watchlist allocation_type is 'percentage'."
+                )
+            
+    elif allocation_type is None:
+        for item in items:
+            if item.percentage is not None or item.quantity is not None:
+                raise ValueError(
+                    f"Invalid item {item.symbol}: neither percentage nor quantity "
+                    f"are allowed when watchlist allocation_type is None."
+                )
+
+    elif allocation_type == "quantity":
+        for item in items:
+            if item.percentage is not None:
+                raise ValueError(
+                    f"Invalid item {item.symbol}: percentage is not allowed when "
+                    f"watchlist allocation_type is 'quantity'."
+                )
+            if item.quantity is None:
+                raise ValueError(
+                    f"Invalid item {item.symbol}: quantity must be provided when "
+                    f"watchlist allocation_type is 'quantity'."
+                )
+
+    else:
+        raise ValueError(
+            f"Unknown allocation_type: {allocation_type}"
+        )

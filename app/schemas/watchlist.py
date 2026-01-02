@@ -16,6 +16,10 @@ class WatchlistVisibility(str, Enum):
     PUBLIC = "public"
     SHARED = "shared"
 
+class StockAllocationType(str, Enum):
+    PERCENTAGE = "percentage"
+    UNIT = "unit"
+
 
 # ---------- SCHEMAS (Pydantic/BaseModel) ----------
 
@@ -28,6 +32,7 @@ class WatchlistBase(BaseModel):
     forked_at: Optional[datetime] = None
     fork_count: int = 0
     original_author_id: Optional[UUID] = None
+    allocation_type: Optional[StockAllocationType] = None
 
 
 class WatchlistCreate(WatchlistBase):

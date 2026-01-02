@@ -53,6 +53,7 @@ from app.services.watchlist_service import (
     update_watchlist_item,
     update_watchlist_share_permission,
     user_can_edit_watchlist,
+    validate_watchlist_allocation,
     watchlist_item_exists,
 )
 
@@ -184,14 +185,17 @@ def create_watchlist(
         watchlist_data = payload.watchlist_data
         items = payload.items
 
-        # 1. Create the new watchlist
+        # 1. Validate allocation type consistency
+        validate_watchlist_allocation(watchlist_data, items)
+
+        # 2. Create the new watchlist
         new_watchlist = create_watchlist_for_user(
             db,
             user_id=user.id,
             watchlist_data=watchlist_data,
         )
 
-        # 2. Add items if provided
+        # 3. Add items if provided
         new_items = []
         if items:
             new_items = add_many_items_to_watchlist(
@@ -200,7 +204,7 @@ def create_watchlist(
                 items=items,
             )
 
-        # 3. Return combined response
+        # 4. Return combined response
         return {
             "message": "Watchlist created successfully.",
             "watchlist": new_watchlist,

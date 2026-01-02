@@ -8,7 +8,7 @@ from sqlalchemy import Column, UniqueConstraint, text
 from sqlalchemy.dialects import postgresql
 from sqlmodel import SQLModel, Field
 
-from app.schemas.watchlist import WatchlistVisibility
+from app.schemas.watchlist import StockAllocationType, WatchlistVisibility
 
 
 class Watchlist(SQLModel, table=True):
@@ -46,6 +46,21 @@ class Watchlist(SQLModel, table=True):
             ),
             nullable=False,
             server_default=text("'private'::watchlist_visibility"),
+        )
+    )
+
+    allocation_type: Optional[StockAllocationType] = Field(
+        sa_column=Column(
+            "allocation_type",
+            postgresql.ENUM(
+                StockAllocationType,
+                name="stock_allocation_type",
+                schema="public",
+                create_type=False,
+                values_callable=lambda e: [i.value for i in e],
+                validate_strings=True,
+            ),
+            nullable=True,
         )
     )
 
