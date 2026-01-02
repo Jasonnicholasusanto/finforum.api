@@ -32,7 +32,7 @@ class WatchlistBase(BaseModel):
     forked_at: Optional[datetime] = None
     fork_count: int = 0
     original_author_id: Optional[UUID] = None
-    allocation_type: Optional[StockAllocationType] = StockAllocationType.PERCENTAGE.value
+    allocation_type: Optional[StockAllocationType] = None
 
 
 class WatchlistCreate(WatchlistBase):
