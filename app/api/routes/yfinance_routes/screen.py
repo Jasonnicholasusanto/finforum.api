@@ -4,8 +4,7 @@ import yfinance as yf
 from fastapi import HTTPException
 
 from app.api.dependencies.profile import get_current_profile
-from app.schemas.screener import ScreenerRequest
-from app.schemas.stocks import ScreenTickerInfo
+from app.schemas.screener import ScreenTickerInfo, ScreenerRequest
 from app.utils.global_variables import (
     CURATED_EQUITY_SCREENERS,
     CURATED_FUND_SCREENERS,
